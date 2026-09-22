@@ -207,6 +207,13 @@ def main():
 
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 
+    result["source_type"] = "SEC Company Facts"
+    result["source_document"] = "pmi_companyfacts.json"
+
+    result["derived"] = (
+    result["quarter"] == "Q4"
+    )
+
     result.to_csv(OUTPUT_FILE, index=False)
 
     # Friendly terminal display.

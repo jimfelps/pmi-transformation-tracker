@@ -249,6 +249,9 @@ def parse_filing(file_path):
                 "year": year,
                 "quarter": quarter,
                 **metrics,
+                "source_type": "SEC filing",
+                "source_document": file_path.name,
+                "derived": False,
             }
 
     return None
@@ -374,6 +377,9 @@ def derive_q4(quarterly_df, annual_metrics, year):
     q4_record = {
         "year": year,
         "quarter": "Q4",
+        "source_type": "SEC filing",
+        "source_document": f"{year}-FY.html",
+        "derived": True,
     }
 
     metrics = [
