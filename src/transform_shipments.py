@@ -293,12 +293,117 @@ def validate_shipments(df):
             f"Total diff: {total_difference:+.2f}"
         )
 
+def parse_2025_annual(file_path):
+    """
+    Extract full-year 2025 standardized shipment volumes.
+    """
+
+    tables = find_shipment_tables(file_path)
+
+    for table in tables:
+
+        rows = table_to_rows(table)
+
+        header = None
+        values = None
+
+        for row in rows:
+
+            if (
+                "Total PMI" in row
+                and "SFP" in row
+                and "Cigarettes" in row
+            ):
+                header = row
+
+            if (
+                row
+                and row[0].startswith(
+                    "Total Shipment Volume"
+                )
+            ):
+                values = row[1:]
+
+        if header is None or values is None:
+            continue
+
+        result = {}
+
+        for metric_name, value in zip(
+            header,
+            values,
+        ):
+            canonical_name = METRIC_MAP.get(
+                metric_name
+            )
+
+            if canonical_name:
+                result[canonical_name] = float(value)
+
+        if len(result) == 6:
+            return result
+
+    return None
+
+
+def derive_q4(quarterly_df, annual_metrics, year):
+    """
+    Derive Q4 additive shipment metrics:
+
+        Q4 = FY - Q1 - Q2 - Q3
+    """
+
+    year_data = quarterly_df[
+        quarterly_df["year"] == year
+    ]
+
+    required_quarters = {"Q1", "Q2", "Q3"}
+
+    available_quarters = set(
+        year_data["quarter"]
+    )
+
+    if not required_quarters.issubset(
+        available_quarters
+    ):
+        raise ValueError(
+            f"Cannot derive {year} Q4: "
+            f"Q1-Q3 are not complete."
+        )
+
+    q4_record = {
+        "year": year,
+        "quarter": "Q4",
+    }
+
+    metrics = [
+        "total",
+        "smoke_free",
+        "htu",
+        "oral_sfp",
+        "e_vapor",
+        "cigarettes",
+    ]
+
+    for metric in metrics:
+
+        first_three_quarters = (
+            year_data[metric].sum()
+        )
+
+        q4_record[metric] = round(
+            annual_metrics[metric]
+            - first_three_quarters,
+            1,
+        )
+
+    return q4_record
 
 def main():
 
     filing_files = (
-        sorted(FILINGS_DIR.glob("2025-*.html"))
-        + sorted(FILINGS_DIR.glob("2026-*.html"))
+        sorted(FILINGS_DIR.glob("2025-Q*.html"))
+        + sorted(FILINGS_DIR.glob("2026-Q*.html"))
     )
 
     records = []
@@ -316,6 +421,33 @@ def main():
             )
 
     result = pd.DataFrame(records)
+
+    annual_file = (
+    FILINGS_DIR / "2025-FY.html"
+    )
+
+    annual_metrics = parse_2025_annual(
+        annual_file
+    )
+
+    if annual_metrics is None:
+        raise ValueError(
+            "Could not extract 2025 annual shipment data."
+        )
+
+    q4_record = derive_q4(
+        result,
+        annual_metrics,
+        2025,
+    )
+
+    result = pd.concat(
+        [
+            result,
+            pd.DataFrame([q4_record]),
+        ],
+        ignore_index=True,
+    )
 
     quarter_order = {
         "Q1": 1,

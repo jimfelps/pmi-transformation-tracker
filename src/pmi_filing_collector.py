@@ -21,6 +21,8 @@ FILINGS = {
 
     "2026-Q1": "https://www.sec.gov/Archives/edgar/data/1413329/000162828026027019/pm-20260331.htm",
     "2026-Q2": "https://www.sec.gov/Archives/edgar/data/1413329/000162828026049493/pm-20260630.htm",
+    "2024-FY": "https://www.sec.gov/Archives/edgar/data/1413329/000141332925000013/pm-20241231.htm",
+    "2025-FY": "https://www.sec.gov/Archives/edgar/data/1413329/000162828026005939/pm-20251231.htm",
 }
 
 
