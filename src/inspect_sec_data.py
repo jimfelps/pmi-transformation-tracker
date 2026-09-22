@@ -20,14 +20,16 @@ def inspect_concept(us_gaap, concept_name):
     print(f"DESC:    {concept.get('description')}")
     print(f"UNITS:   {list(concept.get('units', {}).keys())}")
 
-    # Most financial statement concepts will be reported in USD.
     units = concept.get("units", {})
 
-    if "USD" not in units:
-        print("No USD observations found.")
+    if not units:
+        print("No observations found.")
         return
 
-    observations = units["USD"]
+    unit_name = list(units.keys())[0]
+    observations = units[unit_name]
+
+    print(f"Using unit: {unit_name}")
 
     # Show only recent 10-K and 10-Q observations.
     recent = [
@@ -56,14 +58,13 @@ def main():
 
     us_gaap = data["facts"]["us-gaap"]
 
-    revenue_concepts = [
+    concepts_to_inspect = [
         "RevenueFromContractWithCustomerExcludingAssessedTax",
-        "RevenueFromContractWithCustomerIncludingAssessedTax",
-        "RevenueFromRelatedParties",
-        "SalesRevenueNet",
+        "OperatingIncomeLoss",
+        "EarningsPerShareDiluted",
     ]
 
-    for concept in revenue_concepts:
+    for concept in concepts_to_inspect:
         inspect_concept(us_gaap, concept)
 
 
