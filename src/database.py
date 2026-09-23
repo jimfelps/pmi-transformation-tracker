@@ -11,6 +11,9 @@ SHIPMENTS_FILE = Path(
 FINANCIALS_FILE = Path(
     "data/processed/quarterly_financials.csv"
 )
+PRODUCT_REVENUE_FILE = Path(
+    "data/processed/quarterly_product_revenue.csv"
+)
 
 def create_database():
     """
@@ -120,6 +123,7 @@ PRODUCTS = [
     "oral_sfp",
     "e_vapor",
     "cigarettes",
+    "combustible",
 ]
 
 def main():
@@ -127,6 +131,7 @@ def main():
     load_dimensions()
     load_shipment_facts()
     load_financial_facts()
+    load_product_revenue_facts()
 
 def load_dimensions():
     """
@@ -457,6 +462,80 @@ def load_financial_facts():
     connection.close()
 
     print("Financial facts loaded.")
+
+def load_product_revenue_facts():
+
+    connection = sqlite3.connect(
+        DATABASE_FILE
+    )
+
+    connection.execute(
+        "PRAGMA foreign_keys = ON"
+    )
+
+    cursor = connection.cursor()
+
+    revenue = pd.read_csv(
+        PRODUCT_REVENUE_FILE
+    )
+
+    for _, row in revenue.iterrows():
+
+        period_id = get_dimension_id(
+            cursor,
+            "dim_period",
+            "period_id",
+            "period_label",
+            row["period_label"],
+        )
+
+        metric_id = get_dimension_id(
+            cursor,
+            "dim_metric",
+            "metric_id",
+            "metric_name",
+            "revenue",
+        )
+
+        product_id = get_dimension_id(
+            cursor,
+            "dim_product",
+            "product_id",
+            "product_name",
+            row["product_name"],
+        )
+
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO fact_observation
+            (
+                period_id,
+                metric_id,
+                product_id,
+                value,
+                source_type,
+                source_document,
+                derived
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                period_id,
+                metric_id,
+                product_id,
+                row["revenue"] * 1_000_000,
+                row["source_type"],
+                row["source_document"],
+                int(row["derived"]),
+            ),
+        )
+
+    connection.commit()
+    connection.close()
+
+    print(
+        "Product revenue facts loaded."
+    )
     
 if __name__ == "__main__":
     main()
