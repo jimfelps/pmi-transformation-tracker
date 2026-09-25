@@ -840,6 +840,49 @@ def get_segment_growth_drivers():
 
     return result
 
+def get_product_performance():
+    """
+    Build quarterly smoke-free product performance
+    for the presentation layer.
+
+    Includes shipment volume, year-over-year growth,
+    and contribution to total smoke-free volume growth.
+    """
+
+    shipments = get_shipment_yoy().copy()
+
+    smoke_free_products = [
+        "htu",
+        "oral_sfp",
+        "e_vapor",
+    ]
+
+    performance = shipments[
+        shipments["product_name"].isin(
+            smoke_free_products
+        )
+    ][
+        [
+            "period_label",
+            "product_name",
+            "shipment_volume",
+            "volume_yoy_pct",
+            "volume_change",
+            "sfp_growth_contribution",
+        ]
+    ].copy()
+
+    return (
+        performance
+        .sort_values(
+            [
+                "period_label",
+                "product_name",
+            ]
+        )
+        .reset_index(drop=True)
+    )
+
 def get_transformation_summary():
     """
     Build a quarter-level summary of PMI's transformation.
