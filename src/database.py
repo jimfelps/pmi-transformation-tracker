@@ -14,6 +14,12 @@ FINANCIALS_FILE = Path(
 PRODUCT_REVENUE_FILE = Path(
     "data/processed/quarterly_product_revenue.csv"
 )
+SEGMENT_PROFITABILITY_FILE = Path(
+    "data/processed/quarterly_segment_profitability.csv"
+)
+BRIDGES_FILE = Path(
+    "data/processed/quarterly_segment_bridges.csv"
+)
 
 def create_database():
     """
@@ -58,6 +64,22 @@ def create_database():
         )
     """)
 
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS dim_segment (
+            segment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            segment_name TEXT NOT NULL UNIQUE
+        )
+        """
+    )
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS dim_driver (
+            driver_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            driver_name TEXT NOT NULL UNIQUE
+        )
+    """)
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS fact_observation (
             observation_id INTEGER PRIMARY KEY,
@@ -81,6 +103,34 @@ def create_database():
                 REFERENCES dim_product(product_id)
         )
     """)
+
+    cursor.execute("PRAGMA table_info(fact_observation)")
+    columns = [row[1] for row in cursor.fetchall()]
+
+    if "segment_id" not in columns:
+        cursor.execute(
+            """
+            ALTER TABLE fact_observation
+            ADD COLUMN segment_id INTEGER
+            REFERENCES dim_segment(segment_id)
+            """
+        )
+
+    cursor.execute(
+        "PRAGMA table_info(fact_observation)"
+    )
+
+    columns = [
+        row[1]
+        for row in cursor.fetchall()
+    ]
+
+    if "driver_id" not in columns:
+        cursor.execute("""
+            ALTER TABLE fact_observation
+            ADD COLUMN driver_id INTEGER
+            REFERENCES dim_driver(driver_id)
+        """)
 
     connection.commit()
     connection.close()
@@ -108,11 +158,12 @@ METRICS = [
     ("operating_income", "Financial", "USD"),
     ("diluted_eps", "Financial", "USD/share"),
     ("operating_margin", "Financial", "ratio"),
-    (
-        "shipment_volume",
-        "Volume",
-        "billion_equivalent_units",
-    ),
+    ("shipment_volume", "Volume", "billion_equivalent_units"),
+    ("cost_of_sales", "Financial", "USD"),
+    ("gross_profit", "Financial", "USD"),
+    ("gross_margin", "Financial", "ratio"),
+    ("revenue_change", "Financial", "USD"),
+    ("gross_profit_change", "Financial", "USD"),
 ]
 
 
@@ -126,12 +177,32 @@ PRODUCTS = [
     "combustible",
 ]
 
+SEGMENTS = [
+    "international_smoke_free",
+    "international_combustibles",
+    "us",
+    "total",
+]
+
+DRIVERS = [
+    "total_change",
+    "currency",
+    "acquisitions_divestitures",
+    "price",
+    "volume_mix_other",
+    "cost",
+]
+
 def main():
     create_database()
     load_dimensions()
     load_shipment_facts()
     load_financial_facts()
     load_product_revenue_facts()
+    load_segment_facts()
+    load_bridge_facts()
+
+    print("Database load complete.")
 
 def load_dimensions():
     """
@@ -211,6 +282,26 @@ def load_dimensions():
             VALUES (?)
             """,
             (product_name,),
+        )
+
+    for segment in SEGMENTS:
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO dim_segment (segment_name)
+            VALUES (?)
+            """,
+            (segment,),
+        )
+
+    for driver in DRIVERS:
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO dim_driver (
+                driver_name
+            )
+            VALUES (?)
+            """,
+            (driver,),
         )
         
 
@@ -427,6 +518,8 @@ def load_financial_facts():
                 WHERE period_id = ?
                     AND metric_id = ?
                     AND product_id IS NULL
+                    AND segment_id IS NULL
+                    AND driver_id IS NULL
                 """,
                 (
                     period_id,
@@ -533,9 +626,203 @@ def load_product_revenue_facts():
     connection.commit()
     connection.close()
 
-    print(
-        "Product revenue facts loaded."
+    print("Product revenue facts loaded.")
+
+def load_segment_facts():
+    df = pd.read_csv(SEGMENT_PROFITABILITY_FILE)
+
+    conn = sqlite3.connect(DATABASE_FILE)
+    conn.execute("PRAGMA foreign_keys = ON")
+    cursor = conn.cursor()
+
+    for _, row in df.iterrows():
+        period_id = get_dimension_id(
+            cursor,
+            "dim_period",
+            "period_id",
+            "period_label",
+            row["period_label"],
+        )
+
+        metric_id = get_dimension_id(
+            cursor,
+            "dim_metric",
+            "metric_id",
+            "metric_name",
+            row["metric"],
+        )
+
+        segment_id = get_dimension_id(
+            cursor,
+            "dim_segment",
+            "segment_id",
+            "segment_name",
+            row["segment"],
+        )
+
+        # Segment source reports values in millions of USD.
+        # Convert financial dollar metrics to actual USD so they use
+        # the same unit as our existing financial observations.
+        value = row["value"]
+
+        if row["metric"] in {
+            "revenue",
+            "cost_of_sales",
+            "gross_profit",
+        }:
+            value = value * 1_000_000
+
+        # Explicit delete makes this loader idempotent and avoids
+        # relying on SQLite NULL behavior in the existing unique key.
+        cursor.execute(
+            """
+            DELETE FROM fact_observation
+            WHERE period_id = ?
+              AND metric_id = ?
+              AND product_id IS NULL
+              AND segment_id = ?
+            """,
+            (
+                period_id,
+                metric_id,
+                segment_id,
+            ),
+        )
+
+        cursor.execute(
+            """
+            INSERT INTO fact_observation (
+                period_id,
+                metric_id,
+                product_id,
+                segment_id,
+                value,
+                source_type,
+                source_document,
+                derived
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                period_id,
+                metric_id,
+                None,
+                segment_id,
+                value,
+                row["source_type"],
+                row["source_document"],
+                int(row["derived"]),
+            ),
+        )
+
+    conn.commit()
+    conn.close()
+
+    print(f"Loaded {len(df)} segment observations.")
+
+def load_bridge_facts():
+    connection = sqlite3.connect(
+        DATABASE_FILE
     )
+    cursor = connection.cursor()
+
+    bridges = pd.read_csv(BRIDGES_FILE)
+
+    observations_loaded = 0
+
+    for _, row in bridges.iterrows():
+        period_id = get_dimension_id(
+            cursor,
+            "dim_period",
+            "period_id",
+            "period_label",
+            row["period_label"],
+        )
+
+        metric_id = get_dimension_id(
+            cursor,
+            "dim_metric",
+            "metric_id",
+            "metric_name",
+            row["metric"],
+        )
+
+        segment_id = get_dimension_id(
+            cursor,
+            "dim_segment",
+            "segment_id",
+            "segment_name",
+            row["segment"],
+        )
+
+        driver_id = get_dimension_id(
+            cursor,
+            "dim_driver",
+            "driver_id",
+            "driver_name",
+            row["driver"],
+        )
+
+        # Source bridge values are reported
+        # in millions of USD. The database
+        # financial metric unit is actual USD.
+        value = row["value"] * 1_000_000
+
+        cursor.execute(
+            """
+            DELETE FROM fact_observation
+            WHERE period_id = ?
+              AND metric_id = ?
+              AND product_id IS NULL
+              AND segment_id = ?
+              AND driver_id = ?
+            """,
+            (
+                period_id,
+                metric_id,
+                segment_id,
+                driver_id,
+            ),
+        )
+
+        cursor.execute(
+            """
+            INSERT INTO fact_observation (
+                period_id,
+                metric_id,
+                product_id,
+                segment_id,
+                driver_id,
+                value,
+                source_type,
+                source_document,
+                derived
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                period_id,
+                metric_id,
+                None,
+                segment_id,
+                driver_id,
+                value,
+                row["source_type"],
+                row["source_document"],
+                int(row["derived"]),
+            ),
+        )
+
+        observations_loaded += 1
+
+    connection.commit()
+    connection.close()
+
+    print(
+        f"Loaded {observations_loaded} "
+        "bridge observations."
+    )
+
     
 if __name__ == "__main__":
     main()
