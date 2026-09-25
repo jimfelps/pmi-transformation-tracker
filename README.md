@@ -1,5 +1,7 @@
 # PMI Transformation Tracker
 
+**[View the live dashboard](https://pmi-transformation-tracker.streamlit.app/)**
+
 An end-to-end finance and data engineering project examining how quickly Philip Morris International is transforming from a traditional cigarette company into a smoke-free nicotine company.
 
 The project combines SEC financial data, company operating disclosures, Python-based data transformation, a dimensional SQLite model, an analytical layer, automated validation, and a Streamlit dashboard.
