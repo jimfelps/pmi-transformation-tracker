@@ -371,7 +371,7 @@ The roadmap is intentionally driven by analytical questions rather than by addin
 Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/jimfelps/pmi-transformation-tracker.git
 cd pmi-transformation-tracker
 ```
 
