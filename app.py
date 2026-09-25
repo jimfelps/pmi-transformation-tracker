@@ -832,8 +832,9 @@ st.markdown(
 
     **Primary sources**
 
-    - SEC Company Facts / XBRL data for standardized
-      company financial measures.
+    - SEC Company Facts / XBRL for standardized company 
+      financial measures such as revenue, operating income, 
+      and diluted EPS.
     - PMI quarterly and annual SEC filings for product
       shipments, smoke-free revenue, segment economics,
       and growth-driver disclosures.
@@ -844,6 +845,19 @@ st.markdown(
     stored in a dimensional SQLite model, and transformed
     into presentation-ready analytical datasets before
     reaching this dashboard.
+    """
+)
+
+st.markdown("### Source Documents")
+
+st.markdown(
+    """
+    The analysis is built from public company disclosures
+    and regulatory filings. Key source libraries:
+
+    - [PMI Earnings & Quarterly Materials](https://www.pmi.com/investor-relations/reports-filings)
+    - [PMI Investor Relations](https://www.pmi.com/investor-relations/overview)
+    - [PMI SEC Filings — EDGAR](https://www.sec.gov/edgar/browse/?CIK=0001413329)
     """
 )
 
