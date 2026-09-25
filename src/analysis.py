@@ -310,7 +310,15 @@ def get_financial_yoy():
             ON f.period_id = p.period_id
         JOIN dim_metric m
             ON f.metric_id = m.metric_id
-        WHERE m.metric_group = 'Financial'
+        WHERE m.metric_name IN (
+            'revenue',
+            'operating_income',
+            'operating_margin',
+            'diluted_eps'
+        )
+            AND f.product_id IS NULL
+            AND f.segment_id IS NULL
+            AND f.driver_id IS NULL
         ORDER BY
             m.metric_name,
             p.period_order
@@ -832,26 +840,212 @@ def get_segment_growth_drivers():
 
     return result
 
-def main():
-    drivers = get_segment_growth_drivers()
+def get_transformation_summary():
+    """
+    Build a quarter-level summary of PMI's transformation.
 
-    print("\nSegment Growth Drivers")
-    print("=" * 100)
+    This function composes existing analytical functions
+    rather than querying the database directly.
+    """
+
+    # --------------------------------------------------
+    # 1. Smoke-free mix
+    # --------------------------------------------------
+
+    mix = get_smoke_free_mix_comparison().copy()
+
+    mix_summary = mix[
+        [
+            "period_label",
+            "shipment_mix",
+            "revenue_mix",
+            "revenue_mix_premium",
+        ]
+    ].rename(
+        columns={
+            "shipment_mix": "smoke_free_shipment_mix",
+            "revenue_mix": "smoke_free_revenue_mix",
+            "revenue_mix_premium":
+                "smoke_free_revenue_mix_premium",
+        }
+    )
+
+    # --------------------------------------------------
+    # 2. Smoke-free growth
+    # --------------------------------------------------
+
+    smoke_free_growth = (
+        get_product_growth_comparison(
+            "smoke_free"
+        )
+        .copy()
+    )
+
+    smoke_free_growth = smoke_free_growth[
+        [
+            "period_label",
+            "volume_yoy_pct",
+            "revenue_yoy_pct",
+            "revenue_volume_spread",
+        ]
+    ].rename(
+        columns={
+            "volume_yoy_pct":
+                "smoke_free_volume_growth",
+            "revenue_yoy_pct":
+                "smoke_free_revenue_growth",
+            "revenue_volume_spread":
+                "smoke_free_revenue_volume_spread",
+        }
+    )
+
+    # --------------------------------------------------
+    # 3. Combustible growth
+    # --------------------------------------------------
+
+    combustible_growth = (
+        get_product_growth_comparison(
+            "combustible",
+            shipment_product_name="cigarettes",
+        )
+        .copy()
+    )
+
+    combustible_growth = combustible_growth[
+        [
+            "period_label",
+            "volume_yoy_pct",
+            "revenue_yoy_pct",
+            "revenue_volume_spread",
+        ]
+    ].rename(
+        columns={
+            "volume_yoy_pct":
+                "cigarette_volume_growth",
+            "revenue_yoy_pct":
+                "combustible_revenue_growth",
+            "revenue_volume_spread":
+                "combustible_revenue_volume_spread",
+        }
+    )
+
+    # --------------------------------------------------
+    # 4. Segment profitability
+    # --------------------------------------------------
+
+    segments = (
+        get_segment_profitability_yoy()
+        .copy()
+    )
+
+    segment_metrics = [
+        "revenue_yoy_pct",
+        "gross_profit_yoy_pct",
+        "gross_margin",
+        "gross_margin_change_pp",
+    ]
+
+    smoke_free_segment = segments[
+        segments["segment_name"]
+        == "international_smoke_free"
+    ][
+        ["period_label"] + segment_metrics
+    ].rename(
+        columns={
+            "revenue_yoy_pct":
+                "intl_sfp_revenue_growth",
+            "gross_profit_yoy_pct":
+                "intl_sfp_gross_profit_growth",
+            "gross_margin":
+                "intl_sfp_gross_margin",
+            "gross_margin_change_pp":
+                "intl_sfp_gross_margin_change_pp",
+        }
+    )
+
+    combustible_segment = segments[
+        segments["segment_name"]
+        == "international_combustibles"
+    ][
+        ["period_label"] + segment_metrics
+    ].rename(
+        columns={
+            "revenue_yoy_pct":
+                "intl_comb_revenue_growth",
+            "gross_profit_yoy_pct":
+                "intl_comb_gross_profit_growth",
+            "gross_margin":
+                "intl_comb_gross_margin",
+            "gross_margin_change_pp":
+                "intl_comb_gross_margin_change_pp",
+        }
+    )
+
+    # --------------------------------------------------
+    # 5. Company financial performance
+    # --------------------------------------------------
+
+    company = (
+        get_transformation_scorecard()
+        .copy()
+    )
+
+    company_summary = company[
+        [
+            "period_label",
+            "revenue_yoy",
+            "operating_income_yoy",
+            "diluted_eps_yoy",
+            "operating_margin_change_pp",
+        ]
+    ].rename(
+        columns={
+            "revenue_yoy":
+                "company_revenue_growth",
+            "operating_income_yoy":
+                "company_operating_income_growth",
+            "diluted_eps_yoy":
+                "company_eps_growth",
+            "operating_margin_change_pp":
+                "company_operating_margin_change_pp",
+        }
+    )
+
+    # --------------------------------------------------
+    # 6. Combine everything
+    # --------------------------------------------------
+
+    summary = mix_summary
+
+    datasets = [
+        smoke_free_growth,
+        combustible_growth,
+        smoke_free_segment,
+        combustible_segment,
+        company_summary,
+    ]
+
+    for dataset in datasets:
+        summary = summary.merge(
+            dataset,
+            on="period_label",
+            how="left",
+        )
+
+    return summary.sort_values(
+        "period_label"
+    ).reset_index(drop=True)
+
+def main():
+    summary = get_transformation_summary()
+
+    print("\nPMI Transformation Summary")
+    print("=" * 120)
 
     print(
-        drivers[
-            drivers["driver_name"]
-            != "total_change"
-        ][
-            [
-                "period_label",
-                "segment_name",
-                "metric_name",
-                "driver_name",
-                "value_millions",
-                "driver_contribution_pct",
-            ]
-        ].to_string(index=False)
+        summary.to_string(
+            index=False
+        )
     )
 
 
