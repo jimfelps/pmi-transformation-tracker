@@ -34,6 +34,20 @@ PRODUCT_FILE = (
     / "product_performance.csv"
 )
 
+EARNINGS_BRIDGE_FILE = (
+    DATA_DIR
+    / "earnings_bridge.csv"
+)
+
+EPS_RECONCILIATION_FILE = (
+    DATA_DIR
+    / "eps_reconciliation.csv"
+)
+
+EPS_ADJUSTMENT_HISTORY_FILE = (
+    DATA_DIR
+    / "eps_adjustment_history.csv"
+)
 
 # --------------------------------------------------
 # Data
@@ -53,10 +67,35 @@ def load_data():
         PRODUCT_FILE
     )
 
-    return summary, drivers, products
+    earnings_bridge = pd.read_csv(
+        EARNINGS_BRIDGE_FILE
+    )
 
+    eps_reconciliation = pd.read_csv(
+        EPS_RECONCILIATION_FILE
+    )
 
-summary, drivers, products = load_data()
+    eps_adjustment_history = pd.read_csv(
+        EPS_ADJUSTMENT_HISTORY_FILE
+    )
+
+    return (
+        summary,
+        drivers,
+        products,
+        earnings_bridge,
+        eps_reconciliation,
+        eps_adjustment_history,
+    )
+
+(
+    summary,
+    drivers,
+    products,
+    earnings_bridge,
+    eps_reconciliation,
+    eps_adjustment_history,
+) = load_data()
 
 
 # --------------------------------------------------
@@ -801,19 +840,559 @@ with fin_col4:
 # IMPORTANT:
 # This is outside all four column blocks.
 
+# --------------------------------------------------
+# EPS disconnect
+# --------------------------------------------------
+
+st.divider()
+
+st.header("The EPS Disconnect")
+
+st.markdown(
+    """
+    PMI's operating performance strengthened sharply
+    in 2026-Q2, but reported diluted EPS moved in the
+    opposite direction.
+
+    Following earnings below operating income explains
+    how both can be true.
+    """
+)
+
+disconnect_col1, disconnect_col2 = st.columns(2)
+
+with disconnect_col1:
+    st.metric(
+        "Operating Income Growth",
+        f"{latest['company_operating_income_growth']:.1%}",
+    )
+
+with disconnect_col2:
+    st.metric(
+        "Reported Diluted EPS Growth",
+        f"{latest['company_eps_growth']:.1%}",
+    )
+
 st.info(
     """
-    **A question for the next phase**
+    **The question**
 
-    PMI's operating performance is strengthening,
-    but that improvement is not flowing directly
-    through to GAAP diluted EPS.
-
-    Explaining that divergence requires extending
-    the model below operating income to examine
-    interest expense, taxes, non-operating items,
-    and other drivers of earnings per share.
+    How can operating income increase more than 20%
+    while reported diluted EPS declines?
     """
+)
+
+# --------------------------------------------------
+# Earnings bridge
+# --------------------------------------------------
+
+st.subheader(
+    "Where Did the Operating Improvement Go?"
+)
+
+st.markdown(
+    """
+    Following earnings below operating income shows
+    how PMI's strong operating improvement was offset
+    before reaching shareholders.
+
+    The bridge below shows each component's contribution
+    to the year-over-year change in PMI-attributable
+    earnings from 2025-Q2 to 2026-Q2.
+    """
+)
+
+bridge_order = [
+    "Operating Income",
+    "Net Interest",
+    "Non-Service Benefits",
+    "Income Taxes",
+    "Equity Investments",
+    "RBH Impairment",
+    "Noncontrolling Interest",
+]
+
+bridge_chart = (
+    alt.Chart(earnings_bridge)
+    .mark_bar()
+    .encode(
+        x=alt.X(
+            "value_millions:Q",
+            title="Impact on Year-over-Year Earnings Change ($ millions)",
+        ),
+        y=alt.Y(
+            "component:N",
+            title=None,
+            sort=bridge_order,
+            axis=alt.Axis(
+                labelLimit=220,
+            ),
+        ),
+        color=alt.condition(
+            alt.datum.value_millions >= 0,
+            alt.value("#2E7D32"),
+            alt.value("#C62828"),
+        ),
+        tooltip=[
+            alt.Tooltip(
+                "component:N",
+                title="Component",
+            ),
+            alt.Tooltip(
+                "value_millions:Q",
+                title="Impact ($M)",
+                format="+,.0f",
+            ),
+        ],
+    )
+    .properties(
+        height=320,
+    )
+)
+
+bridge_labels_positive = (
+    alt.Chart(
+        earnings_bridge[
+            earnings_bridge["value_millions"] >= 0
+        ]
+    )
+    .mark_text(
+        align="left",
+        baseline="middle",
+        dx=6,
+    )
+    .encode(
+        x="value_millions:Q",
+        y=alt.Y(
+            "component:N",
+            sort=bridge_order,
+        ),
+        text=alt.Text(
+            "value_millions:Q",
+            format="+,.0f",
+        ),
+    )
+)
+
+bridge_labels_negative = (
+    alt.Chart(
+        earnings_bridge[
+            earnings_bridge["value_millions"] < 0
+        ]
+    )
+    .mark_text(
+        align="right",
+        baseline="middle",
+        dx=-6,
+    )
+    .encode(
+        x="value_millions:Q",
+        y=alt.Y(
+            "component:N",
+            sort=bridge_order,
+        ),
+        text=alt.Text(
+            "value_millions:Q",
+            format="+,.0f",
+        ),
+    )
+)
+
+bridge_zero_line = (
+    alt.Chart(
+        pd.DataFrame({"x": [0]})
+    )
+    .mark_rule(
+        color="#888888",
+        strokeWidth=1,
+    )
+    .encode(
+        x="x:Q"
+    )
+)
+
+st.altair_chart(
+    bridge_chart
+    + bridge_zero_line
+    + bridge_labels_positive
+    + bridge_labels_negative,
+    use_container_width=True,
+)
+
+bridge_total = (
+    earnings_bridge["bridge_value"].sum()
+)
+
+st.success(
+    """
+**Strong operations were more than offset below operating income.**
+
+Operating income improved by \\$818 million, but higher income taxes, weaker equity-investment results, the \\$511 million RBH impairment, and higher noncontrolling interests more than absorbed the gain.
+
+Together, the bridge components reconcile to a **\\$222 million decline** in PMI-attributable earnings.
+"""
+)
+
+# --------------------------------------------------
+# Reported vs. adjusted EPS
+# --------------------------------------------------
+
+st.subheader(
+    "Reported EPS vs. Adjusted EPS"
+)
+
+st.markdown(
+    """
+    The earnings bridge explains why GAAP earnings fell.
+    PMI also reports an adjusted EPS measure that removes
+    items management identifies as affecting comparability.
+
+    That distinction materially changes the year-over-year
+    picture in 2026-Q2.
+    """
+)
+
+eps_comparison = eps_reconciliation[
+    (
+        (eps_reconciliation["year"] == 2025)
+        & (eps_reconciliation["quarter"] == "Q2")
+    )
+    | (
+        (eps_reconciliation["year"] == 2026)
+        & (eps_reconciliation["quarter"] == "Q2")
+    )
+].copy()
+
+eps_2025 = eps_comparison[
+    eps_comparison["year"] == 2025
+].iloc[0]
+
+eps_2026 = eps_comparison[
+    eps_comparison["year"] == 2026
+].iloc[0]
+
+reported_growth = (
+    eps_2026["diluted_eps"]
+    / eps_2025["diluted_eps"]
+    - 1
+)
+
+adjusted_growth = (
+    eps_2026["adjusted_eps"]
+    / eps_2025["adjusted_eps"]
+    - 1
+)
+
+reported_col, adjusted_col = st.columns(2)
+
+with reported_col:
+    st.markdown("### Reported EPS")
+
+    st.metric(
+        "2026-Q2",
+        f"${eps_2026['diluted_eps']:.2f}",
+        delta=f"{reported_growth:.1%} YoY",
+    )
+
+    st.caption(
+        f"2025-Q2: ${eps_2025['diluted_eps']:.2f}"
+    )
+
+with adjusted_col:
+    st.markdown("### Adjusted EPS")
+
+    st.metric(
+        "2026-Q2",
+        f"${eps_2026['adjusted_eps']:.2f}",
+        delta=f"{adjusted_growth:.1%} YoY",
+    )
+
+    st.caption(
+        f"2025-Q2: ${eps_2025['adjusted_eps']:.2f}"
+    )
+
+st.subheader(
+    "What Gets Adjusted?"
+)
+
+st.markdown(
+    """
+    PMI's adjusted EPS does not simply remove the RBH
+    impairment. The reconciliation includes several
+    adjustments, some positive and some negative.
+    """
+)
+
+q2_2026_adjustments = (
+    eps_adjustment_history[
+        (eps_adjustment_history["year"] == 2026)
+        & (eps_adjustment_history["quarter"] == "Q2")
+    ]
+    .copy()
+)
+
+adjustment_labels = {
+    "Amortization of intangibles":
+        "Amortization of Intangibles",
+    "Fair value adjustment for equity security investments":
+        "Investment Fair Value",
+    "Swedish Match financing tax impact":
+        "Swedish Match Financing Tax",
+    "RBH equity investment impairment":
+        "RBH Impairment",
+    "Egypt sales tax settlement adjustment":
+        "Egypt Sales Tax Settlement",
+}
+
+q2_2026_adjustments["adjustment_label"] = (
+    q2_2026_adjustments["adjustment"]
+    .map(adjustment_labels)
+)
+
+adjustment_order = [
+    "Amortization of Intangibles",
+    "Investment Fair Value",
+    "Swedish Match Financing Tax",
+    "RBH Impairment",
+    "Egypt Sales Tax Settlement",
+]
+
+adjustment_chart = (
+    alt.Chart(q2_2026_adjustments)
+    .mark_bar()
+    .encode(
+        x=alt.X(
+            "eps_impact:Q",
+            title="Adjustment to Reported EPS ($ per share)",
+        ),
+        y=alt.Y(
+            "adjustment_label:N",
+            title=None,
+            sort=adjustment_order,
+            axis=alt.Axis(
+                labelLimit=220,
+            ),
+        ),
+        color=alt.condition(
+            alt.datum.eps_impact >= 0,
+            alt.value("#2E7D32"),
+            alt.value("#C62828"),
+        ),
+        tooltip=[
+            alt.Tooltip(
+                "adjustment_label:N",
+                title="Adjustment",
+            ),
+            alt.Tooltip(
+                "eps_impact:Q",
+                title="EPS Impact",
+                format="+.2f",
+            ),
+        ],
+    )
+    .properties(
+        height=250,
+    )
+)
+
+st.altair_chart(
+    adjustment_chart,
+    use_container_width=True,
+)
+
+q2_adjustment_total = (
+    q2_2026_adjustments["eps_impact"].sum()
+)
+
+st.info(
+    f"""
+Reported diluted EPS of **\\${eps_2026['diluted_eps']:.2f}**
+plus **\\${q2_adjustment_total:.2f}** of net adjustments
+reconciles to PMI's **\\${eps_2026['adjusted_eps']:.2f}
+adjusted diluted EPS**.
+"""
+)
+
+# --------------------------------------------------
+# Adjustment history
+# --------------------------------------------------
+
+st.subheader(
+    "How Unusual Are the Adjustments?"
+)
+
+st.markdown(
+    """
+    A single-quarter reconciliation cannot show whether
+    an adjustment is genuinely unusual or part of a
+    recurring difference between reported and adjusted EPS.
+
+    Looking across the full period reveals both patterns.
+    """
+)
+
+category_summary = (
+    eps_adjustment_history[
+        [
+            "category",
+            "quarters_present",
+            "quarter_frequency",
+            "cumulative_eps_impact",
+        ]
+    ]
+    .drop_duplicates()
+    .copy()
+)
+
+category_labels = {
+    "amortization": "Amortization",
+    "investment_valuation": "Investment Valuation",
+    "tax_financing": "Financing Tax",
+    "tax": "Other Tax",
+    "impairment": "Impairments",
+    "restructuring": "Restructuring",
+    "divestiture": "Divestiture",
+    "impairment_exit": "Impairment / Exit",
+    "investment_other": "Other Investment",
+    "litigation": "Litigation",
+}
+
+category_summary["category_label"] = (
+    category_summary["category"]
+    .map(category_labels)
+)
+
+category_summary = category_summary.sort_values(
+    [
+        "quarters_present",
+        "cumulative_eps_impact",
+    ],
+    ascending=[
+        False,
+        False,
+    ],
+)
+
+frequency_chart = (
+    alt.Chart(category_summary)
+    .mark_bar()
+    .encode(
+        x=alt.X(
+            "quarters_present:Q",
+            title="Quarters Present (out of 10)",
+            scale=alt.Scale(
+                domain=[0, 10],
+            ),
+        ),
+        y=alt.Y(
+            "category_label:N",
+            title=None,
+            sort="-x",
+            axis=alt.Axis(
+                labelLimit=180,
+            ),
+        ),
+        tooltip=[
+            alt.Tooltip(
+                "category_label:N",
+                title="Category",
+            ),
+            alt.Tooltip(
+                "quarters_present:Q",
+                title="Quarters Present",
+            ),
+            alt.Tooltip(
+                "quarter_frequency:Q",
+                title="Frequency",
+                format=".0%",
+            ),
+            alt.Tooltip(
+                "cumulative_eps_impact:Q",
+                title="Cumulative EPS Impact",
+                format="+.2f",
+            ),
+        ],
+    )
+    .properties(
+        height=340,
+    )
+)
+
+st.altair_chart(
+    frequency_chart,
+    use_container_width=True,
+)
+
+st.markdown(
+    """
+    ### Recurring Does Not Mean Economically Identical
+
+    Frequency reveals that several adjustments recur
+    regularly, but their behavior differs substantially.
+    """
+)
+
+pattern_col1, pattern_col2, pattern_col3 = st.columns(3)
+
+with pattern_col1:
+    st.markdown(
+        """
+        **Persistent normalization**
+
+        **Amortization** appears in all 10 quarters and
+        consistently increases adjusted EPS.
+
+        This is a recurring difference between PMI's
+        reported and adjusted earnings measures rather
+        than an isolated event.
+        """
+    )
+
+with pattern_col2:
+    st.markdown(
+        """
+        **Recurring volatility**
+
+        **Investment valuation** also appears in all
+        10 quarters, but its EPS impact moves in both
+        directions.
+
+        The adjustment removes volatility rather than
+        consistently increasing adjusted earnings.
+        """
+    )
+
+with pattern_col3:
+    st.markdown(
+        """
+        **Episodic events**
+
+        Impairments, restructuring, litigation, and
+        divestiture-related items occur less consistently
+        and can create unusually large effects in
+        individual quarters.
+
+        The RBH impairment is the clearest example.
+        """
+    )
+
+st.info(
+    """
+**Reported and adjusted EPS answer different questions.**
+
+GAAP EPS captures the full accounting result attributable
+to shareholders, including the $511 million RBH impairment
+that affected 2026-Q2.
+
+PMI's adjusted EPS removes that impairment, but it also
+normalizes items that recur frequently, including
+amortization and investment-valuation effects.
+
+The operating improvement is therefore real, and so is the
+reported earnings decline. Understanding PMI's performance
+requires seeing both rather than treating either measure as
+the complete story.
+"""
 )
 
 # --------------------------------------------------
@@ -827,24 +1406,34 @@ st.header("Sources & Methodology")
 st.markdown(
     """
     This project combines standardized financial data
-    with operating disclosures from Philip Morris
-    International's public filings.
+    with operating and management disclosures from
+    Philip Morris International's public filings and
+    earnings materials.
 
     **Primary sources**
 
-    - SEC Company Facts / XBRL for standardized company 
-      financial measures such as revenue, operating income, 
-      and diluted EPS.
+    - SEC Company Facts / XBRL for standardized company
+      financial measures such as revenue, operating income,
+      interest, taxes, net income, and diluted EPS.
     - PMI quarterly and annual SEC filings for product
       shipments, smoke-free revenue, segment economics,
-      and growth-driver disclosures.
+      growth-driver disclosures, and other reported
+      financial items.
+    - PMI earnings releases for management's reported-to-
+      adjusted EPS reconciliations and the individual
+      adjustments underlying non-GAAP diluted EPS.
 
     **Analytical approach**
 
     Source data is collected and normalized in Python,
-    stored in a dimensional SQLite model, and transformed
-    into presentation-ready analytical datasets before
-    reaching this dashboard.
+    stored or structured according to the needs of the
+    source, and transformed into presentation-ready
+    analytical datasets before reaching this dashboard.
+
+    GAAP financial measures and management-adjusted
+    measures are preserved separately so the analysis
+    can compare them without treating either as a
+    substitute for the other.
     """
 )
 
@@ -902,6 +1491,26 @@ with st.expander("Important methodology notes"):
         normalized from PMI's reported bridge disclosures.
         Driver contributions can exceed 100% of net change
         when positive factors are offset by negative ones.
+
+        **EPS reconciliation**  
+        The earnings bridge follows PMI's reported financial
+        statement structure below operating income rather than
+        forcing the data into a generic income-statement model.
+        Modeled components reconcile to PMI-attributable net
+        earnings for the periods analyzed.
+
+        **Reported vs. adjusted EPS**  
+        Reported diluted EPS is a GAAP measure. Adjusted diluted
+        EPS and its individual adjustments are management-defined
+        non-GAAP measures reported by PMI. The dashboard preserves
+        both measures separately and does not treat adjusted EPS
+        as a replacement for the reported result.
+
+        **Adjustment frequency**  
+        Historical adjustment frequency measures how many of the
+        10 quarters analyzed contain each adjustment category.
+        Frequency alone does not establish whether an item is
+        economically recurring, unusual, or appropriate to exclude.
         """
     )
 
@@ -923,9 +1532,10 @@ st.header("Where This Project Goes Next")
 
 st.markdown(
     """
-    V1 focuses on the economics of PMI's transformation.
-    The underlying data model was designed to support
-    additional analytical questions as the project evolves.
+    The project now connects PMI's operating transformation
+    through to shareholder earnings. The underlying model
+    is designed to support additional analytical questions
+    as the project evolves.
     """
 )
 
@@ -940,12 +1550,6 @@ with roadmap_col1:
         Capture management guidance over time and compare
         subsequent results with the expectations management
         communicated to investors.
-
-        ### The EPS Disconnect
-
-        Extend the financial model below operating income
-        to explain the divergence between operating
-        performance and GAAP diluted EPS.
 
         ### PMI vs. Altria
 

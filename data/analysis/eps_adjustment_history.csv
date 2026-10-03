@@ -1,0 +1,50 @@
+period_label,year,quarter,adjustment,category,eps_impact,direction,quarters_present,quarter_frequency,cumulative_eps_impact,source_document
+2024-Q1,2024,Q1,Asset impairment and exit costs,impairment_exit,0.09,increase_adjusted_eps,1,0.1,0.09,PMI Q1 2024 earnings release
+2024-Q1,2024,Q1,Swedish Match financing tax impact,tax_financing,0.07,increase_adjusted_eps,9,0.9,-0.059999999999999984,PMI Q1 2024 earnings release
+2024-Q1,2024,Q1,Amortization of intangibles,amortization,0.06,increase_adjusted_eps,10,1.0,1.15,PMI Q1 2024 earnings release
+2024-Q1,2024,Q1,Impairment of other intangibles,impairment,0.01,increase_adjusted_eps,6,0.6,2.08,PMI Q1 2024 earnings release
+2024-Q1,2024,Q1,Tax items,tax,-0.03,decrease_adjusted_eps,6,0.6,-0.07,PMI Q1 2024 earnings release
+2024-Q1,2024,Q1,Fair value adjustment for equity security investments,investment_valuation,-0.08,decrease_adjusted_eps,10,1.0,-0.3,PMI Q1 2024 earnings release
+2024-Q2,2024,Q2,Amortization of intangibles,amortization,0.11,increase_adjusted_eps,10,1.0,1.15,PMI Q2 2024 earnings release
+2024-Q2,2024,Q2,Swedish Match financing tax impact,tax_financing,0.02,increase_adjusted_eps,9,0.9,-0.059999999999999984,PMI Q2 2024 earnings release
+2024-Q2,2024,Q2,Fair value adjustment for equity security investments,investment_valuation,-0.08,decrease_adjusted_eps,10,1.0,-0.3,PMI Q2 2024 earnings release
+2024-Q3,2024,Q3,Vectura expected-sale impairment,impairment,0.13,increase_adjusted_eps,6,0.6,2.08,PMI Q3 2024 earnings release
+2024-Q3,2024,Q3,Amortization of intangibles,amortization,0.12,increase_adjusted_eps,10,1.0,1.15,PMI Q3 2024 earnings release
+2024-Q3,2024,Q3,Egypt sales tax charge,tax,0.03,increase_adjusted_eps,6,0.6,-0.07,PMI Q3 2024 earnings release
+2024-Q3,2024,Q3,Swedish Match financing tax impact,tax_financing,-0.1,decrease_adjusted_eps,9,0.9,-0.059999999999999984,PMI Q3 2024 earnings release
+2024-Q3,2024,Q3,Fair value adjustment for equity security investments,investment_valuation,-0.24,decrease_adjusted_eps,10,1.0,-0.3,PMI Q3 2024 earnings release
+2024-Q4,2024,Q4,RBH equity investment impairment,impairment,1.49,increase_adjusted_eps,6,0.6,2.08,PMI Q4 2025 comparative disclosure
+2024-Q4,2024,Q4,Swedish Match financing tax impact,tax_financing,0.14,increase_adjusted_eps,9,0.9,-0.059999999999999984,PMI Q4 2025 comparative disclosure
+2024-Q4,2024,Q4,Fair value adjustment for equity security investments,investment_valuation,0.13,increase_adjusted_eps,10,1.0,-0.3,PMI Q4 2025 comparative disclosure
+2024-Q4,2024,Q4,Amortization of intangibles,amortization,0.11,increase_adjusted_eps,10,1.0,1.15,PMI Q4 2025 comparative disclosure
+2024-Q4,2024,Q4,Megapolis localization tax impact,tax,0.05,increase_adjusted_eps,6,0.6,-0.07,PMI Q4 2025 comparative disclosure
+2024-Q4,2024,Q4,Restructuring charges,restructuring,0.01,increase_adjusted_eps,4,0.4,0.16,PMI Q4 2025 comparative disclosure
+2025-Q1,2025,Q1,Amortization of intangibles,amortization,0.12,increase_adjusted_eps,10,1.0,1.15,PMI Q1 2025 earnings release
+2025-Q1,2025,Q1,Swedish Match financing tax impact,tax_financing,-0.06,decrease_adjusted_eps,9,0.9,-0.059999999999999984,PMI Q1 2025 earnings release
+2025-Q1,2025,Q1,Fair value adjustment for equity security investments,investment_valuation,-0.09,decrease_adjusted_eps,10,1.0,-0.3,PMI Q1 2025 earnings release
+2025-Q2,2025,Q2,Restructuring charges,restructuring,0.13,increase_adjusted_eps,4,0.4,0.16,PMI Q2 2025 earnings release
+2025-Q2,2025,Q2,Amortization of intangibles,amortization,0.12,increase_adjusted_eps,10,1.0,1.15,PMI Q2 2025 earnings release
+2025-Q2,2025,Q2,Impairment of goodwill and other intangibles,impairment,0.03,increase_adjusted_eps,6,0.6,2.08,PMI Q2 2025 earnings release
+2025-Q2,2025,Q2,Tax items,tax,0.03,increase_adjusted_eps,6,0.6,-0.07,PMI Q2 2025 earnings release
+2025-Q2,2025,Q2,Fair value adjustment for equity security investments,investment_valuation,-0.17,decrease_adjusted_eps,10,1.0,-0.3,PMI Q2 2025 earnings release
+2025-Q2,2025,Q2,Swedish Match financing tax impact,tax_financing,-0.18,decrease_adjusted_eps,9,0.9,-0.059999999999999984,PMI Q2 2025 earnings release
+2025-Q3,2025,Q3,Amortization of intangibles,amortization,0.13,increase_adjusted_eps,10,1.0,1.15,PMI Q3 2025 earnings release
+2025-Q3,2025,Q3,Germany excise tax litigation charge,litigation,0.1,increase_adjusted_eps,1,0.1,0.1,PMI Q3 2025 earnings release
+2025-Q3,2025,Q3,Wellness equity investment impairment,impairment,0.09,increase_adjusted_eps,6,0.6,2.08,PMI Q3 2025 earnings release
+2025-Q3,2025,Q3,Fair value adjustment for equity security investments,investment_valuation,-0.07,decrease_adjusted_eps,10,1.0,-0.3,PMI Q3 2025 earnings release
+2025-Q3,2025,Q3,RBH Canada Plan implementation,investment_other,-0.1,decrease_adjusted_eps,1,0.1,-0.1,PMI Q3 2025 earnings release
+2025-Q3,2025,Q3,Tax items,tax,-0.14,decrease_adjusted_eps,6,0.6,-0.07,PMI Q3 2025 earnings release
+2025-Q4,2025,Q4,Fair value adjustment for equity security investments,investment_valuation,0.14,increase_adjusted_eps,10,1.0,-0.3,PMI Q4 2025 earnings release
+2025-Q4,2025,Q4,Amortization of intangibles,amortization,0.13,increase_adjusted_eps,10,1.0,1.15,PMI Q4 2025 earnings release
+2025-Q4,2025,Q4,Loss on expected sale of consumer accessories and other businesses,divestiture,0.06,increase_adjusted_eps,1,0.1,0.06,PMI Q4 2025 earnings release
+2025-Q4,2025,Q4,Restructuring charges,restructuring,0.01,increase_adjusted_eps,4,0.4,0.16,PMI Q4 2025 earnings release
+2025-Q4,2025,Q4,Swedish Match financing tax impact,tax_financing,-0.01,decrease_adjusted_eps,9,0.9,-0.059999999999999984,PMI Q4 2025 earnings release
+2026-Q1,2026,Q1,Fair value adjustment for equity security investments,investment_valuation,0.22,increase_adjusted_eps,10,1.0,-0.3,PMI Q1 2026 earnings release
+2026-Q1,2026,Q1,Amortization of intangibles,amortization,0.12,increase_adjusted_eps,10,1.0,1.15,PMI Q1 2026 earnings release
+2026-Q1,2026,Q1,Swedish Match financing tax impact,tax_financing,0.05,increase_adjusted_eps,9,0.9,-0.059999999999999984,PMI Q1 2026 earnings release
+2026-Q1,2026,Q1,Restructuring charges,restructuring,0.01,increase_adjusted_eps,4,0.4,0.16,PMI Q1 2026 earnings release
+2026-Q2,2026,Q2,RBH equity investment impairment,impairment,0.33,increase_adjusted_eps,6,0.6,2.08,PMI Q2 2026 earnings release
+2026-Q2,2026,Q2,Amortization of intangibles,amortization,0.13,increase_adjusted_eps,10,1.0,1.15,PMI Q2 2026 earnings release
+2026-Q2,2026,Q2,Swedish Match financing tax impact,tax_financing,0.01,increase_adjusted_eps,9,0.9,-0.059999999999999984,PMI Q2 2026 earnings release
+2026-Q2,2026,Q2,Egypt sales tax settlement adjustment,tax,-0.01,decrease_adjusted_eps,6,0.6,-0.07,PMI Q2 2026 earnings release
+2026-Q2,2026,Q2,Fair value adjustment for equity security investments,investment_valuation,-0.06,decrease_adjusted_eps,10,1.0,-0.3,PMI Q2 2026 earnings release

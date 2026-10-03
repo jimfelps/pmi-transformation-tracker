@@ -4,6 +4,9 @@ from analysis import (
     get_transformation_summary,
     get_segment_growth_drivers,
     get_product_performance,
+    get_earnings_bridge,
+    get_eps_reconciliation,
+    get_eps_adjustment_history,
 )
 
 
@@ -100,6 +103,80 @@ def export_product_performance():
 
     return products
 
+def export_earnings_bridge():
+    """
+    Export the PMI earnings bridge
+    for the presentation layer.
+    """
+
+    bridge = get_earnings_bridge()
+
+    output_file = (
+        OUTPUT_DIR
+        / "earnings_bridge.csv"
+    )
+
+    bridge.to_csv(
+        output_file,
+        index=False,
+    )
+
+    print(
+        f"Earnings bridge exported: "
+        f"{output_file}"
+    )
+
+    return bridge
+
+def export_eps_reconciliation():
+    """
+    Export reported-to-adjusted EPS history
+    for the presentation layer.
+    """
+
+    eps = get_eps_reconciliation()
+
+    output_file = (
+        OUTPUT_DIR
+        / "eps_reconciliation.csv"
+    )
+
+    eps.to_csv(
+        output_file,
+        index=False,
+    )
+
+    print(
+        f"EPS reconciliation exported: "
+        f"{output_file}"
+    )
+
+    return eps
+
+def export_eps_adjustment_history():
+    """
+    Export historical EPS adjustment detail
+    and recurrence metrics.
+    """
+
+    history = get_eps_adjustment_history()
+
+    output_file = (
+        OUTPUT_DIR
+        / "eps_adjustment_history.csv"
+    )
+
+    history.to_csv(
+        output_file,
+        index=False,
+    )
+
+    print(
+        f"EPS adjustment history exported: "
+        f"{output_file}"
+    )
+
+    return history
 
 def main():
     OUTPUT_DIR.mkdir(
@@ -110,6 +187,9 @@ def main():
     summary = export_transformation_summary()
     drivers = export_growth_drivers()
     products = export_product_performance()
+    bridge = export_earnings_bridge()
+    eps = export_eps_reconciliation()
+    history = export_eps_adjustment_history()
 
     print()
     print("Analysis export complete.")
@@ -129,6 +209,20 @@ def main():
         f"{len(products)}"
     )
 
+    print(
+        f"Earnings bridge rows: "
+        f"{len(bridge)}"
+    )
+
+    print(
+        f"EPS reconciliation rows: "
+        f"{len(eps)}"
+    )
+
+    print(
+        f"EPS adjustment history rows: "
+        f"{len(history)}"
+    )
 
 if __name__ == "__main__":
     main()

@@ -6,15 +6,13 @@ INPUT_FILE = Path("data/raw/pmi_companyfacts.json")
 
 
 SEARCH_TERMS = [
-    "shipment",
-    "cigarette",
-    "heated",
-    "tobacco",
-    "htu",
-    "oral",
-    "smoke",
-    "vapor",
-    "zyn",
+    "impairment",
+    "equity",
+    "investment",
+    "rhb",
+    "rbh",
+    "rothmans",
+    "swedish",
 ]
 
 
@@ -54,6 +52,7 @@ def main():
                     (
                         concept_name,
                         label,
+                        description,
                         list(
                             concept_data.get(
                                 "units",
@@ -67,10 +66,11 @@ def main():
             print("No matching concepts.")
             continue
 
-        for concept_name, label, units in matches:
+        for concept_name, label, description, units in matches:
             print()
             print(f"Concept: {concept_name}")
             print(f"Label:   {label}")
+            print(f"Desc:    {description}")
             print(f"Units:   {units}")
 
 

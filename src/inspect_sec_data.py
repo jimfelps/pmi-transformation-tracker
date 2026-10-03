@@ -51,6 +51,33 @@ def inspect_concept(us_gaap, concept_name):
             f"VAL={obs.get('val'):,}"
         )
 
+def search_concepts(us_gaap, search_terms):
+    """Search US-GAAP concepts by concept name and label."""
+
+    print("\n" + "=" * 80)
+    print("CONCEPT SEARCH")
+
+    for search_term in search_terms:
+        print(f"\nSearch term: {search_term}")
+        print("-" * 40)
+
+        matches = []
+
+        for concept_name, concept in us_gaap.items():
+            label = concept.get("label", "")
+
+            searchable_text = f"{concept_name} {label}".lower()
+
+            if search_term.lower() in searchable_text:
+                matches.append((concept_name, label))
+
+        if not matches:
+            print("No matches found.")
+            continue
+
+        for concept_name, label in matches:
+            print(f"{concept_name}")
+            print(f"    {label}")
 
 def main():
     with open(INPUT_FILE, "r", encoding="utf-8") as file:
@@ -59,14 +86,32 @@ def main():
     us_gaap = data["facts"]["us-gaap"]
 
     concepts_to_inspect = [
-        "RevenueFromContractWithCustomerExcludingAssessedTax",
         "OperatingIncomeLoss",
-        "EarningsPerShareDiluted",
+        "InterestIncomeExpenseNonoperatingNet",
+        "NetPeriodicDefinedBenefitsExpenseReversalOfExpenseExcludingServiceCostComponent",
+        "IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments",
+        "IncomeTaxExpenseBenefit",
+        "IncomeLossFromEquityMethodInvestments",
+        "ProfitLoss",
+        "NetIncomeLossAttributableToNoncontrollingInterest",
+        "NetIncomeLoss",
+        "EquitySecuritiesWithoutReadilyDeterminableFairValueImpairmentLossAnnualAmount"
     ]
 
     for concept in concepts_to_inspect:
         inspect_concept(us_gaap, concept)
 
+    search_terms = [
+        "interest",
+        "income before",
+        "income tax",
+        "pension",
+        "benefit",
+        "equity",
+        "impairment",
+    ]
+
+    # search_concepts(us_gaap, search_terms)
 
 if __name__ == "__main__":
     main()

@@ -12,14 +12,73 @@ CONCEPTS = {
     "revenue": {
         "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
         "unit": "USD",
+        "q4_method": "subtract",
     },
     "operating_income": {
         "concept": "OperatingIncomeLoss",
         "unit": "USD",
+        "q4_method": "subtract",
+    },
+    "net_interest": {
+        "concept": "InterestIncomeExpenseNonoperatingNet",
+        "unit": "USD",
+        "q4_method": "subtract",
+    },
+    "nonservice_benefit_expense": {
+        "concept": "NetPeriodicDefinedBenefitsExpenseReversalOfExpenseExcludingServiceCostComponent",
+        "unit": "USD",
+        "q4_method": "subtract",
+    },
+    "pretax_before_equity_investments": {
+        "concept": "IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments",
+        "unit": "USD",
+        "q4_method": "subtract",
+    },
+    "income_tax_expense": {
+        "concept": "IncomeTaxExpenseBenefit",
+        "unit": "USD",
+        "q4_method": "subtract",
+    },
+    "equity_method_income": {
+        "concept": "IncomeLossFromEquityMethodInvestments",
+        "unit": "USD",
+        "q4_method": "subtract",
+    },
+    "consolidated_net_income": {
+        "concept": "ProfitLoss",
+        "unit": "USD",
+        "q4_method": "subtract",
+    },
+    "noncontrolling_interest": {
+        "concept": "NetIncomeLossAttributableToNoncontrollingInterest",
+        "unit": "USD",
+        "q4_method": "subtract",
+    },
+    "pmi_net_income": {
+        "concept": "NetIncomeLoss",
+        "unit": "USD",
+        "q4_method": "subtract",
+    },
+    "common_net_income": {
+        "concept": "NetIncomeLossAvailableToCommonStockholdersBasic",
+        "unit": "USD",
+        "q4_method": "subtract",
     },
     "diluted_eps": {
         "concept": "EarningsPerShareDiluted",
         "unit": "USD/shares",
+        "q4_method": "none",
+    },
+    "diluted_shares": {
+        "concept": "WeightedAverageNumberOfDilutedSharesOutstanding",
+        "unit": "shares",
+        "q4_method": "none",
+    },
+    "rbh_impairment": {
+    "concept": "EquitySecuritiesWithoutReadilyDeterminableFairValueImpairmentLossAnnualAmount",
+    "unit": "USD",
+    "q4_method": "subtract",
+    "missing_value": 0,
     },
 }
 
@@ -106,7 +165,7 @@ def get_standalone_quarters(observations, start_year=2024):
     return df
 
 
-def add_derived_q4(df):
+def add_derived_q4(df, missing_value=None):
     """Derive standalone Q4 from FY less Q1-Q3."""
 
     q4_records = []
@@ -114,27 +173,46 @@ def add_derived_q4(df):
     for year in sorted(df["year"].unique()):
         year_data = df[df["year"] == year]
 
-        values = dict(zip(year_data["quarter"], year_data["value"]))
-
-        required = {"Q1", "Q2", "Q3", "FY"}
-
-        if required.issubset(values):
-            q4_value = (
-                values["FY"]
-                - values["Q1"]
-                - values["Q2"]
-                - values["Q3"]
+        values = dict(
+            zip(
+                year_data["quarter"],
+                year_data["value"],
             )
+        )
 
-            q4_records.append(
-                {
-                    "year": year,
-                    "quarter": "Q4",
-                    "value": q4_value,
-                    "filed": None,
-                    "accession": None,
-                }
-            )
+        if "FY" not in values:
+            continue
+
+        if missing_value is not None:
+            q1 = values.get("Q1", missing_value)
+            q2 = values.get("Q2", missing_value)
+            q3 = values.get("Q3", missing_value)
+        else:
+            required = {"Q1", "Q2", "Q3"}
+
+            if not required.issubset(values):
+                continue
+
+            q1 = values["Q1"]
+            q2 = values["Q2"]
+            q3 = values["Q3"]
+
+        q4_value = (
+            values["FY"]
+            - q1
+            - q2
+            - q3
+        )
+
+        q4_records.append(
+            {
+                "year": year,
+                "quarter": "Q4",
+                "value": q4_value,
+                "filed": None,
+                "accession": None,
+            }
+        )
 
     if q4_records:
         df = pd.concat(
@@ -142,7 +220,6 @@ def add_derived_q4(df):
             ignore_index=True,
         )
 
-    # We only want standalone quarters in the final dataset.
     df = df[df["quarter"] != "FY"]
 
     return df
@@ -156,7 +233,15 @@ def transform_metric(data, metric_name, config):
     )
 
     df = get_standalone_quarters(observations)
-    df = add_derived_q4(df)
+
+    
+    if config.get("q4_method") == "subtract":
+        df = add_derived_q4(
+            df,
+            missing_value=config.get("missing_value"),
+        )
+    else:
+        df = df[df["quarter"] != "FY"]
 
     df = df.rename(columns={"value": metric_name})
 
@@ -186,9 +271,40 @@ def main():
             how="outer",
         )
 
+    result["rbh_impairment"] = (
+        result["rbh_impairment"].fillna(0)
+    )
+
     result["operating_margin"] = (
         result["operating_income"] / result["revenue"]
     )
+
+    result["below_line_residual"] = (
+    result["consolidated_net_income"]
+    - (
+        result["pretax_before_equity_investments"]
+        - result["income_tax_expense"]
+        - result["rbh_impairment"]
+        + result["equity_method_income"]
+    )
+)
+
+    result["nci_reconciliation_check"] = (
+    result["consolidated_net_income"]
+    - result["noncontrolling_interest"]
+    - result["pmi_net_income"]
+)
+
+    result["common_income_adjustment"] = (
+    result["common_net_income"]
+    - result["pmi_net_income"]
+)
+
+    result["eps_reconciliation_check"] = (
+    result["common_net_income"]
+    / result["diluted_shares"]
+    - result["diluted_eps"]
+)
 
     quarter_order = {
         "Q1": 1,

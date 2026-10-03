@@ -7,6 +7,18 @@ DATABASE_FILE = Path(
     "data/pmi_tracker.db"
 )
 
+EARNINGS_BRIDGE_FILE = Path(
+    "data/processed/earnings_bridge.csv"
+)
+
+EPS_ADJUSTMENTS_FILE = Path(
+    "data/processed/quarterly_eps_adjustments.csv"
+)
+
+RAW_EPS_ADJUSTMENTS_FILE = Path(
+    "data/raw/eps_adjustments.csv"
+)
+
 
 def get_shipment_mix():
     """
@@ -1078,6 +1090,178 @@ def get_transformation_summary():
     return summary.sort_values(
         "period_label"
     ).reset_index(drop=True)
+
+def get_earnings_bridge():
+    """
+    Prepare the earnings bridge for the presentation layer.
+
+    Positive values increase PMI-attributable earnings.
+    Negative values decrease PMI-attributable earnings.
+    """
+
+    bridge = pd.read_csv(
+        EARNINGS_BRIDGE_FILE
+    )
+
+    bridge["value_millions"] = (
+        bridge["bridge_value"]
+        / 1_000_000
+    )
+
+    bridge = bridge[
+        [
+            "sort_order",
+            "component",
+            "prior_period",
+            "current_period",
+            "prior_value",
+            "current_value",
+            "bridge_value",
+            "value_millions",
+        ]
+    ].copy()
+
+    return (
+        bridge
+        .sort_values("sort_order")
+        .reset_index(drop=True)
+    )
+
+def get_eps_reconciliation():
+    """
+    Prepare quarterly reported-to-adjusted EPS
+    reconciliation for the presentation layer.
+    """
+
+    eps = pd.read_csv(
+        EPS_ADJUSTMENTS_FILE
+    )
+
+    eps["period_label"] = (
+        eps["year"].astype(str)
+        + "-"
+        + eps["quarter"]
+    )
+
+    eps = eps[
+        [
+            "period_label",
+            "year",
+            "quarter",
+            "diluted_eps",
+            "total_eps_adjustment",
+            "adjusted_eps",
+            "reported_adjusted_eps",
+            "adjusted_eps_reconciliation",
+            "adjustment_count",
+        ]
+    ].copy()
+
+    return (
+        eps
+        .sort_values(["year", "quarter"])
+        .reset_index(drop=True)
+    )
+
+def get_eps_adjustment_history():
+    """
+    Prepare historical EPS adjustments for the
+    presentation layer.
+
+    Adds category-level frequency information while
+    preserving each individual quarterly adjustment.
+    """
+
+    adjustments = pd.read_csv(
+        RAW_EPS_ADJUSTMENTS_FILE
+    )
+
+    adjustments["period_label"] = (
+        adjustments["year"].astype(str)
+        + "-"
+        + adjustments["quarter"]
+    )
+
+    total_quarters = (
+        adjustments[
+            ["year", "quarter"]
+        ]
+        .drop_duplicates()
+        .shape[0]
+    )
+
+    category_frequency = (
+        adjustments.groupby(
+            "category",
+            as_index=False,
+        )
+        .agg(
+            quarters_present=(
+                "period_label",
+                "nunique",
+            ),
+            cumulative_eps_impact=(
+                "eps_impact",
+                "sum",
+            ),
+        )
+    )
+
+    category_frequency["quarter_frequency"] = (
+        category_frequency["quarters_present"]
+        / total_quarters
+    )
+
+    adjustments = adjustments.merge(
+        category_frequency,
+        on="category",
+        how="left",
+    )
+
+    adjustments["direction"] = (
+        adjustments["eps_impact"]
+        .apply(
+            lambda x:
+                "increase_adjusted_eps"
+                if x > 0
+                else "decrease_adjusted_eps"
+                if x < 0
+                else "no_effect"
+        )
+    )
+
+    adjustments = adjustments[
+        [
+            "period_label",
+            "year",
+            "quarter",
+            "adjustment",
+            "category",
+            "eps_impact",
+            "direction",
+            "quarters_present",
+            "quarter_frequency",
+            "cumulative_eps_impact",
+            "source_document",
+        ]
+    ].copy()
+
+    return (
+        adjustments
+        .sort_values(
+            [
+                "year",
+                "quarter",
+                "eps_impact",
+            ],
+            ascending=[
+                True,
+                True,
+                False,
+            ],
+        )
+        .reset_index(drop=True)
+    )
 
 def main():
     summary = get_transformation_summary()
