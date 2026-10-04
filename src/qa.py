@@ -9,7 +9,9 @@ ANALYSIS_DIR = BASE_DIR / "data" / "analysis"
 SUMMARY_FILE = ANALYSIS_DIR / "transformation_summary.csv"
 DRIVERS_FILE = ANALYSIS_DIR / "growth_drivers.csv"
 PRODUCT_FILE = ANALYSIS_DIR / "product_performance.csv"
-
+EARNINGS_BRIDGE_FILE = ANALYSIS_DIR / "earnings_bridge.csv"
+EPS_RECONCILIATION_FILE = ANALYSIS_DIR / "eps_reconciliation.csv"
+EPS_ADJUSTMENT_HISTORY_FILE = ANALYSIS_DIR / "eps_adjustment_history.csv"
 
 def check(condition, message):
     if condition:
@@ -23,8 +25,11 @@ def main():
     summary = pd.read_csv(SUMMARY_FILE)
     drivers = pd.read_csv(DRIVERS_FILE)
     products = pd.read_csv(PRODUCT_FILE)
+    earnings_bridge = pd.read_csv(EARNINGS_BRIDGE_FILE)
+    eps_reconciliation = pd.read_csv(EPS_RECONCILIATION_FILE)
+    eps_adjustments = pd.read_csv(EPS_ADJUSTMENT_HISTORY_FILE)
 
-    print("\nPMI Transformation Tracker — V1 QA")
+    print("\nPMI Transformation Tracker — QA")
     print("=" * 60)
 
     # --------------------------------------------------
@@ -44,6 +49,21 @@ def main():
     check(
         len(products) == 18,
         "Product-performance dataset contains 18 observations",
+    )
+
+    check(
+        len(earnings_bridge) == 7,
+        "Earnings bridge contains 7 components",
+    )
+
+    check(
+        len(eps_reconciliation) == 10,
+        "EPS reconciliation contains 10 quarters",
+    )
+
+    check(
+        len(eps_adjustments) == 49,
+        "EPS adjustment history contains 49 observations",
     )
 
     # --------------------------------------------------
@@ -72,6 +92,23 @@ def main():
             ]
         ].duplicated().any(),
         "Growth drivers have unique analytical keys",
+    )
+
+    check(
+        not earnings_bridge["component"].duplicated().any(),
+        "Earnings bridge has one row per component",
+    )
+
+    check(
+        not eps_reconciliation["period_label"].duplicated().any(),
+        "EPS reconciliation has one row per period",
+    )
+
+    check(
+        not eps_adjustments[
+            ["period_label", "adjustment"]
+        ].duplicated().any(),
+        "EPS adjustment history has unique period/adjustment rows",
     )
 
     # --------------------------------------------------
@@ -157,8 +194,60 @@ def main():
             f"{key} bridge reconciles within $2M",
         )
 
+    # --------------------------------------------------
+    # Earnings bridge reconciliation
+    # --------------------------------------------------
+
+    bridge_total = earnings_bridge["value_millions"].sum()
+
+    check(
+        abs(bridge_total - (-222)) < 0.01,
+        "Earnings bridge reconciles to $222M decline in PMI earnings",
+    )
+
+    # --------------------------------------------------
+    # EPS reconciliation
+    # --------------------------------------------------
+
+    reported_adjusted = eps_reconciliation.dropna(
+        subset=["reported_adjusted_eps"]
+    )
+
+    check(
+        len(reported_adjusted) == 8,
+        "Eight quarters have independently reported adjusted EPS",
+    )
+
+    max_eps_difference = (
+        reported_adjusted["adjusted_eps"]
+        - reported_adjusted["reported_adjusted_eps"]
+    ).abs().max()
+
+    check(
+        max_eps_difference < 0.001,
+        "Calculated adjusted EPS reconciles to PMI-reported adjusted EPS",
+    )
+
+    # --------------------------------------------------
+    # Non-additive Q4 protection
+    # --------------------------------------------------
+
+    q4_eps = eps_reconciliation[
+        eps_reconciliation["quarter"] == "Q4"
+    ]
+
+    check(
+        q4_eps["diluted_eps"].isna().all(),
+        "Q4 diluted EPS is not derived by subtraction",
+    )
+
+    check(
+        q4_eps["adjusted_eps"].isna().all(),
+        "Q4 adjusted EPS is not derived by subtraction",
+    )
+
     print("\n" + "=" * 60)
-    print("V1 QA PASSED")
+    print("PMI TRANSFORMATION TRACKER QA PASSED")
     print("=" * 60)
 
 

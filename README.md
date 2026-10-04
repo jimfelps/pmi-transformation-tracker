@@ -65,7 +65,13 @@ Within smoke-free products, scale and growth rate also tell different stories. H
 
 At the company level, 2026-Q2 revenue increased approximately **10.4%** and operating income increased approximately **22.0%**, with operating margin improving approximately **3.9 percentage points**. GAAP diluted EPS, however, declined approximately **7.7%** year over year.
 
-That divergence creates one of the project's next analytical questions: **why is stronger operating performance not flowing directly through to GAAP diluted EPS?**
+Extending the model below operating income explains the divergence. The **$818 million year-over-year improvement in operating income** was more than offset by higher income taxes, weaker equity-investment results, a **$511 million impairment of PMI's investment in Rothmans, Benson & Hedges (RBH)**, and higher earnings attributable to noncontrolling interests. Together, the modeled components reconcile to a **$222 million decline in PMI-attributable net earnings**.
+
+PMI's management-adjusted results tell a different story. Reported diluted EPS declined from **$1.95 to $1.80**, or approximately **7.7%**, while adjusted diluted EPS increased from **$1.91 to $2.20**, or approximately **15.2%**.
+
+The difference is not simply the removal of one unusual impairment. Across the 10 quarters analyzed, amortization appears as an adjustment in every quarter, investment-valuation effects appear in every quarter, and Swedish Match financing-tax effects appear in nine. Other items, including impairments, restructuring, litigation, and divestiture-related effects, are more episodic.
+
+The analysis therefore does not treat either reported or adjusted EPS as the single "correct" measure of performance. GAAP EPS captures the full accounting result attributable to shareholders, while PMI's adjusted measure removes both unusual events and some recurring sources of accounting volatility. Understanding the company's earnings performance requires seeing both.
 
 ## How the Project Evolved
 
@@ -159,49 +165,121 @@ This made it possible to examine whether International Smoke-Free was simply gro
 
 It also reinforced an important modeling principle used throughout the project: when PMI changed its reportable segment structure, historical comparisons needed to use management's recast historical data rather than combining periods reported under incompatible segment definitions.
 
-### 6. The analysis generated the next data requirement
+### 6. Operating performance created an earnings question
 
-The final stage of V1 moved back to company-level financial results.
+The final stage of the initial analysis moved back to company-level financial results.
 
 PMI's 2026-Q2 results showed strong revenue growth, operating-income growth, and operating-margin improvement. GAAP diluted EPS moved in the opposite direction.
 
-The existing model can identify that divergence but cannot responsibly explain it because the current financial model stops primarily at operating income.
+The existing model could identify that divergence but could not responsibly explain it because the financial model stopped primarily at operating income.
 
-Rather than infer a cause that the modeled data cannot support, the divergence becomes a question for the next phase of the project.
+Rather than infer a cause that the modeled data could not support, the divergence became a new analytical question:
 
-Answering it will require extending the model below operating income to incorporate items such as interest expense, taxes, non-operating items, and other drivers of earnings per share.
+> **How can operating income increase more than 20% while reported diluted EPS declines?**
 
-This illustrates the development pattern behind the project:
+Answering it required extending the financial model below operating income.
 
-> **Observation → hypothesis → additional data requirement → model extension → analysis**
+### 7. Extend the model below operating income
 
-The dashboard is therefore not intended to be a finished collection of every potentially useful PMI metric. It is an evolving analytical model in which new data is added when it helps answer a specific business question.
+The next phase added standardized SEC financial concepts for:
+
+- net nonoperating interest
+- non-service defined-benefit expense or benefit
+- income before equity-method investments and taxes
+- income-tax expense
+- equity-method investment results
+- consolidated net income
+- noncontrolling interests
+- PMI-attributable net income
+- income available to common shareholders
+- diluted weighted-average shares
+- diluted EPS
+
+This created a traceable path from operating income through earnings attributable to PMI shareholders.
+
+For 2026-Q2, the model showed that a **$818 million year-over-year increase in operating income** was ultimately offset by movements below operating income, producing a **$222 million decline in PMI-attributable net earnings**.
+
+### 8. A reconciliation residual exposed a missing fact
+
+Building the earnings bridge also created a useful data-engineering problem.
+
+The initial model reconciled most quarters exactly, but two periods contained unexplained residuals:
+
+- 2024-Q4: approximately **$2.316 billion**
+- 2026-Q2: approximately **$511 million**
+
+Rather than treating the differences as unexplained plugs, the source data was investigated.
+
+The first hypothesis was that the missing amounts might be company-specific XBRL facts. Searching PMI's custom taxonomies did not identify the values.
+
+The original Inline XBRL filings were then inspected directly. Both amounts were tagged using the standardized US-GAAP concept for impairment losses on equity securities without readily determinable fair values.
+
+Returning to SEC Company Facts with that concept identified:
+
+- the **$2.316 billion RBH impairment** recognized in 2024
+- the additional **$511 million RBH impairment** recognized in 2026-Q2
+
+Adding the standardized concept to the transformation pipeline eliminated the residuals and produced exact reconciliation across all modeled quarters.
+
+This became a useful example of the project's development pattern:
+
+> **Residual → investigation → source validation → model extension → reconciliation**
+
+### 9. Reported EPS created a second measurement question
+
+Explaining the GAAP earnings decline raised another question.
+
+PMI reported 2026-Q2 diluted EPS of **$1.80**, down approximately **7.7%** year over year, but management-adjusted diluted EPS of **$2.20**, up approximately **15.2%**.
+
+Management's reconciliation showed a net **$0.40 per-share adjustment**, including:
+
+- amortization of intangibles
+- fair-value adjustments for equity-security investments
+- Swedish Match financing-tax effects
+- the RBH equity-investment impairment
+- an Egypt sales-tax settlement adjustment
+
+Rather than treating adjusted EPS as a replacement for GAAP EPS, the project preserves the two measures separately.
+
+Historical adjustment data was then collected across 10 quarters to test whether the adjustments were actually unusual.
+
+The results showed different patterns. Amortization appeared in all 10 quarters and consistently increased adjusted EPS. Investment-valuation adjustments also appeared in all 10 quarters but moved in both directions. Swedish Match financing-tax effects appeared in nine quarters. Impairments, restructuring, litigation, and divestiture-related adjustments were more episodic.
+
+This leads to a more nuanced conclusion:
+
+> **Recurring does not necessarily mean non-economic, and adjusted does not necessarily mean unusual.**
+
+Reported and adjusted EPS answer different questions and are most useful when viewed together.
+
+The dashboard is therefore not intended to be a finished collection of every potentially useful PMI metric. It is an evolving analytical model in which new data is added when an observation creates a specific business question.
 
 ## Data Architecture
 
 The project separates data collection, transformation, storage, analysis, and presentation into distinct layers.
 
 ```text
-SEC Company Facts API        PMI SEC Filings
-         │                         │
-         └──────────┬──────────────┘
-                    ▼
-              Raw Source Data
-                    │
-                    ▼
-           Python Transformation
-                    │
-                    ▼
-           Dimensional SQLite Model
-                    │
-                    ▼
-              Analytical Layer
-                    │
-                    ▼
-        Presentation-Ready Exports
-                    │
-                    ▼
-            Streamlit Dashboard
+SEC Company Facts API    PMI SEC Filings    PMI Earnings Releases
+         │                      │                    │
+         └──────────────────────┼────────────────────┘
+                                ▼
+                         Raw Source Data
+                                │
+                                ▼
+                      Python Transformation
+                                │
+                    ┌───────────┴───────────┐
+                    ▼                       ▼
+          Dimensional SQLite Model    Processed Datasets
+                    │                       │
+                    └───────────┬───────────┘
+                                ▼
+                         Analytical Layer
+                                │
+                                ▼
+                  Presentation-Ready Exports
+                                │
+                                ▼
+                       Streamlit Dashboard
 ```
 
 The dashboard does not contain source-specific transformation logic and does not query raw filing data. By the time data reaches Streamlit, source semantics have already been normalized and the required analytical measures have been calculated.
@@ -300,9 +378,11 @@ For each bridge:
 Total Change ≈ Sum of Reported Drivers
 ```
 
-Because source disclosures are rounded, small differences are permitted. V1 requires each modeled bridge to reconcile within **$2 million** of the reported total change.
+The below-operating-income model adds another accounting-style reconciliation. Modeled pretax, tax, equity-investment, impairment, and noncontrolling-interest components are reconciled through consolidated net income and PMI-attributable earnings. Across the modeled periods, these bridges reconcile exactly after incorporating the identified RBH impairment concept.
 
-A dedicated V1 QA script also validates the final analytical exports consumed by the dashboard. This provides a release check after the full transformation and analytical pipeline has run.
+The reported-to-adjusted EPS model is independently validated against the adjusted diluted EPS figures published by PMI. For each quarter with independently reported adjusted EPS, the sum of reported diluted EPS and the modeled individual adjustments reconciles to management's reported adjusted diluted EPS.
+
+Dedicated QA checks validate the analytical exports consumed by the dashboard, providing a release check after the transformation and analytical pipeline has run.
 
 The goal is not merely to produce plausible-looking charts. It is to maintain a traceable path from public disclosure to analytical output.
 
@@ -332,19 +412,23 @@ Breaks smoke-free shipment volume into heated tobacco, oral smoke-free, and e-va
 
 Connects the operating transformation back to company-level revenue, operating income, operating margin, and diluted EPS.
 
-The divergence between improving operating results and declining GAAP diluted EPS in 2026-Q2 becomes a question for a future phase rather than an unsupported conclusion in V1.
+The divergence between improving operating results and declining GAAP diluted EPS creates the next analytical question rather than the end of the analysis.
+
+### The EPS Disconnect
+
+Extends the financial model below operating income to explain how a **22.0% increase in operating income** can coexist with a **7.7% decline in reported diluted EPS**.
+
+The section follows the year-over-year earnings bridge through interest, taxes, equity investments, the RBH impairment, and noncontrolling interests.
+
+It then reconciles reported diluted EPS with PMI's management-adjusted diluted EPS and examines 10 quarters of adjustment history to distinguish persistent normalization policies, recurring volatility, and more episodic events.
 
 ## Project Roadmap
 
-V1 establishes the core transformation model, but several analytical questions remain open.
+The project now connects PMI's operating transformation through to shareholder earnings, but several analytical questions remain open.
 
 ### Guidance vs. Actuals
 
 Capture management guidance over time and compare subsequent performance with the expectations communicated to investors.
-
-### The EPS Disconnect
-
-Extend the financial model below operating income to investigate the divergence between operating performance and GAAP diluted EPS.
 
 ### PMI vs. Altria
 
@@ -398,18 +482,18 @@ Launch the dashboard:
 streamlit run app.py
 ```
 
-### V1 Quality Check
+### Quality Check
 
 The final analytical exports can be validated with:
 
 ```powershell
-python src\qa_v1.py
+python src\qa.py
 ```
 
 A successful run ends with:
 
 ```text
-V1 QA PASSED
+PMI TRANSFORMATION TRACKER QA PASSED
 ```
 
 ## Repository Structure
@@ -438,6 +522,9 @@ pmi-transformation-tracker/
 │   ├── transform_revenue.py
 │   ├── transform_segments.py
 │   ├── transform_bridges.py
+│   ├── transform_earnings_bridge.py
+│   ├── transform_eps_adjustments.py
+│   ├── analyze_eps_adjustments.py
 │   ├── database.py
 │   ├── analysis.py
 │   ├── export_analysis.py
@@ -452,7 +539,7 @@ pmi-transformation-tracker/
 Original downloaded source material. Raw source files are excluded from version control.
 
 **`data/processed/`**  
-Structured intermediate datasets produced by the transformation layer.
+Structured intermediate datasets produced by the transformation layer, including financial statement, earnings-bridge, and reported-to-adjusted EPS datasets.
 
 **`data/analysis/`**  
 Presentation-ready analytical datasets consumed by Streamlit.
