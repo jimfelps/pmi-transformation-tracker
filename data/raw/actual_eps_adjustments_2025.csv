@@ -1,0 +1,11 @@
+fiscal_year,adjustment_key,adjustment,eps_impact
+2025,restructuring,Restructuring charges,0.14
+2025,intangible_impairment,Impairment of goodwill and other intangibles,0.03
+2025,amortization,Amortization of intangibles,0.5
+2025,swedish_match_tax,Income tax impact associated with Swedish Match AB financing,-0.25
+2025,consumer_business_sale,Loss on expected sale of consumer accessories and other businesses,0.06
+2025,germany_excise_tax,Germany excise tax classification litigation charge,0.1
+2025,rbh_plan,"RBH (Canada) Plan Implementation, including dividend income, net",-0.1
+2025,wellness_impairment,Impairment of Wellness business related equity investment,0.09
+2025,investment_fair_value,Fair value adjustment for equity security investments,-0.18
+2025,tax_items,Tax items,-0.11

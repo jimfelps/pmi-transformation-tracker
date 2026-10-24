@@ -49,6 +49,18 @@ EPS_ADJUSTMENT_HISTORY_FILE = (
     / "eps_adjustment_history.csv"
 )
 
+GUIDANCE_ACCURACY_FILE = (
+    DATA_DIR / "guidance_accuracy.csv"
+)
+
+GUIDANCE_REVISIONS_FILE = (
+    DATA_DIR / "guidance_revisions.csv"
+)
+
+GUIDANCE_ACTUAL_BRIDGE_FILE = (
+    DATA_DIR / "guidance_actual_adjustment_bridge.csv"
+)
+
 # --------------------------------------------------
 # Data
 # --------------------------------------------------
@@ -79,6 +91,21 @@ def load_data():
         EPS_ADJUSTMENT_HISTORY_FILE
     )
 
+    guidance_accuracy = pd.read_csv(
+        GUIDANCE_ACCURACY_FILE,
+        parse_dates=["event_date"],
+    )
+
+    guidance_revisions = pd.read_csv(
+        GUIDANCE_REVISIONS_FILE,
+        parse_dates=["event_date", "previous_event_date"],
+    )
+
+    guidance_actual_bridge = pd.read_csv(
+        GUIDANCE_ACTUAL_BRIDGE_FILE,
+        parse_dates=["event_date"],
+    )
+
     return (
         summary,
         drivers,
@@ -86,6 +113,9 @@ def load_data():
         earnings_bridge,
         eps_reconciliation,
         eps_adjustment_history,
+        guidance_accuracy,
+        guidance_revisions,
+        guidance_actual_bridge,
     )
 
 (
@@ -95,6 +125,9 @@ def load_data():
     earnings_bridge,
     eps_reconciliation,
     eps_adjustment_history,
+    guidance_accuracy,
+    guidance_revisions,
+    guidance_actual_bridge,
 ) = load_data()
 
 
@@ -1396,6 +1429,518 @@ the complete story.
 )
 
 # --------------------------------------------------
+# V2.2 — Guidance vs. Actuals
+# --------------------------------------------------
+
+st.divider()
+
+st.header("Guidance vs. Actuals")
+
+st.markdown(
+    """
+    **FY2025 | Management forecast accuracy**
+
+    Throughout 2025, PMI repeatedly raised its full-year
+    adjusted EPS forecast. But the reasons for those
+    revisions were not always the same.
+
+    Comparing each forecast with the final annual result
+    reveals how management's expectations evolved and
+    how closely the company ultimately performed against them.
+    """
+)
+
+fy_guidance = (
+    guidance_accuracy[
+        guidance_accuracy["fiscal_year"] == 2025
+    ]
+    .sort_values("event_date")
+    .copy()
+)
+
+final_adjusted_eps = fy_guidance["adjusted_eps"].iloc[0]
+
+initial_guidance = fy_guidance.iloc[0]
+final_guidance = fy_guidance.iloc[-1]
+
+metric_col1, metric_col2, metric_col3 = st.columns(3)
+
+with metric_col1:
+    st.metric(
+        "FY2025 Adjusted EPS Actual",
+        f"${final_adjusted_eps:.2f}",
+    )
+
+with metric_col2:
+    st.metric(
+        "Initial Guidance Error",
+        f"{initial_guidance['adjusted_forecast_error']:+.3f}".replace("+", "+$").replace("-", "-$")
+    )
+
+with metric_col3:
+    st.metric(
+        "October Guidance Error",
+        f"{final_guidance['adjusted_forecast_error']:+.3f}".replace("+", "+$").replace("-", "-$")
+    )
+
+st.subheader("How Guidance Evolved")
+
+st.markdown(
+    """
+    Each vertical range represents management's adjusted
+    diluted EPS forecast at the date of the disclosure.
+
+    The midpoint shows the center of each forecast range.
+    The horizontal dashed line represents the final
+    FY2025 adjusted EPS result.
+    """
+)
+
+fy_guidance["event_label"] = (
+    fy_guidance["event_date"].dt.strftime("%b %Y")
+)
+
+event_order = fy_guidance["event_label"].tolist()
+
+base = alt.Chart(fy_guidance).encode(
+    x=alt.X(
+        "event_label:N",
+        title="Guidance Disclosure",
+        sort=event_order,
+        axis=alt.Axis(labelAngle=0),
+    )
+)
+
+# Each guidance range: low to high.
+ranges = base.mark_rule(
+    strokeWidth=6,
+    color="#4C78A8",
+).encode(
+    y=alt.Y(
+        "adjusted_low:Q",
+        title="Adjusted EPS (USD per share)",
+        scale=alt.Scale(zero=False),
+    ),
+    y2="adjusted_high:Q",
+    tooltip=[
+        alt.Tooltip("event_label:N", title="Disclosure"),
+        alt.Tooltip(
+            "adjusted_low:Q",
+            title="Guidance Low",
+            format=".2f",
+        ),
+        alt.Tooltip(
+            "adjusted_high:Q",
+            title="Guidance High",
+            format=".2f",
+        ),
+    ],
+)
+
+# Midpoint of each guidance range.
+midpoints = base.mark_circle(
+    size=120,
+    color="#FFFFFF",
+    stroke="#2C5282",
+    strokeWidth=2,
+).encode(
+    y="adjusted_midpoint:Q",
+    tooltip=[
+        alt.Tooltip(
+            "adjusted_midpoint:Q",
+            title="Guidance Midpoint",
+            format=".3f",
+        )
+    ],
+)
+
+# Final reported adjusted EPS, shared across all events.
+actual_data = pd.DataFrame(
+    {"actual_eps": [final_adjusted_eps]}
+)
+
+actual_line = (
+    alt.Chart(actual_data)
+    .mark_rule(
+        color="#2E7D32",
+        strokeDash=[6, 4],
+        strokeWidth=2,
+    )
+    .encode(
+        y="actual_eps:Q",
+        tooltip=[
+            alt.Tooltip(
+                "actual_eps:Q",
+                title="FY2025 Actual",
+                format=".2f",
+            )
+        ],
+    )
+)
+
+guidance_chart = (
+    ranges + midpoints + actual_line
+).properties(
+    height=350,
+)
+
+st.altair_chart(
+    guidance_chart,
+    use_container_width=True,
+)
+
+st.markdown(
+    """
+    **The initial forecast understated the final result.**
+
+    FY2025 adjusted EPS finished at \$7.54, above the
+    initial February guidance range of \$7.04–\$7.17.
+
+    By July, the final result was within management's
+    guidance range. October's guidance midpoint finished
+    just \$0.03 below actual performance.
+    """
+)
+
+# --------------------------------------------------
+# V2.2 — Guidance revision drivers
+# --------------------------------------------------
+
+st.subheader("What Drove the Guidance Revisions?")
+
+st.markdown(
+    """
+    Not every increase in adjusted EPS guidance reflects an
+    improvement in currency-neutral earnings expectations.
+
+    By separating changes in expected currency impact from
+    changes in currency-neutral guidance, we can identify
+    what actually drove each revision.
+    """
+)
+
+revision_data = (
+    guidance_revisions[
+        guidance_revisions["fiscal_year"] == 2025
+    ]
+    .sort_values("event_date")
+    .copy()
+)
+
+revision_data["revision_label"] = (
+    revision_data["event_date"].dt.strftime("%b %Y")
+)
+
+revision_order = revision_data["revision_label"].tolist()
+
+# Convert the two revision components into a long format
+# suitable for a stacked Altair bar chart.
+
+revision_chart_data = revision_data[
+    [
+        "revision_label",
+        "change_currency_neutral_midpoint",
+        "change_currency_impact_forecast",
+    ]
+].rename(
+    columns={
+        "change_currency_neutral_midpoint":
+            "Currency-neutral guidance",
+        "change_currency_impact_forecast":
+            "Currency impact",
+    }
+).melt(
+    id_vars="revision_label",
+    var_name="driver",
+    value_name="eps_change",
+)
+
+revision_chart = (
+    alt.Chart(revision_chart_data)
+    .mark_bar()
+    .encode(
+        x=alt.X(
+            "eps_change:Q",
+            title="Contribution to Adjusted EPS Revision ($ per share)",
+            stack="zero",
+            axis=alt.Axis(
+                values=[0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35],
+                format=".2f",
+                grid=True,
+            ),
+        ),
+        y=alt.Y(
+            "revision_label:N",
+            title=None,
+            sort=revision_order,
+        ),
+        color=alt.Color(
+            "driver:N",
+            title="Revision Driver",
+            scale=alt.Scale(
+                domain=[
+                    "Currency impact",
+                    "Currency-neutral guidance",
+                ],
+                range=[
+                    "#4C78A8",
+                    "#2E7D32",
+                ],
+            ),
+        ),
+        tooltip=[
+            alt.Tooltip(
+                "revision_label:N",
+                title="Guidance Revision",
+            ),
+            alt.Tooltip(
+                "driver:N",
+                title="Driver",
+            ),
+            alt.Tooltip(
+                "eps_change:Q",
+                title="EPS Contribution",
+                format="+.3f",
+            ),
+        ],
+    )
+    .properties(height=230)
+)
+
+st.divider()
+
+st.altair_chart(
+    revision_chart,
+    use_container_width=True,
+)
+
+st.markdown(
+    """
+    **The first upward revision was entirely currency-driven.**
+
+    Between February and April, PMI raised its adjusted EPS
+    guidance midpoint by \\$0.32 while leaving currency-neutral
+    guidance unchanged.
+
+    July's additional \\$0.07 increase and October's \\$0.015
+    increase came from higher currency-neutral expectations.
+
+    This distinction matters: stronger reported adjusted EPS
+    guidance does not necessarily indicate stronger underlying
+    business expectations.
+    """
+)
+
+
+# --------------------------------------------------
+# V2.2 — October forecast-to-actual EPS bridge
+# --------------------------------------------------
+
+st.subheader("Why Did Reported EPS Miss October Guidance?")
+
+st.markdown(
+    """
+    PMI's October adjusted EPS forecast was remarkably
+    close to the final FY2025 result. Reported EPS,
+    however, finished below the guidance range.
+
+    The difference can be explained by changes in
+    the net adjustments between October's forecast
+    and the final annual results.
+    """
+)
+
+october_bridge = (
+    guidance_actual_bridge[
+        (guidance_actual_bridge["fiscal_year"] == 2025)
+        & (
+            guidance_actual_bridge["event_date"]
+            == pd.Timestamp("2025-10-21")
+        )
+    ]
+    .iloc[0]
+)
+
+adjusted_error = float(
+    october_bridge["adjusted_forecast_error"]
+)
+
+adjustment_difference = float(
+    october_bridge["adjustment_difference"]
+)
+
+reported_error = float(
+    october_bridge["reported_forecast_error"]
+)
+
+# Actual adjustments minus forecast adjustments.
+# A positive difference lowers the reported EPS error.
+adjustment_effect = -adjustment_difference
+
+# Calculate the bridge rather than hardcoding EPS values.
+calculated_reported_error = (
+    adjusted_error + adjustment_effect
+)
+
+assert abs(
+    calculated_reported_error - reported_error
+) < 0.001
+
+
+def format_signed_eps(value):
+    sign = "+" if value >= 0 else "-"
+    return f"{sign}${abs(value):.3f}"
+
+
+bridge_col1, bridge_col2, bridge_col3 = st.columns(3)
+
+with bridge_col1:
+    st.metric(
+        "Adjusted EPS Forecast Error",
+        format_signed_eps(adjusted_error),
+    )
+
+with bridge_col2:
+    st.metric(
+        "Net Adjustment Effect",
+        format_signed_eps(adjustment_effect),
+    )
+
+with bridge_col3:
+    st.metric(
+        "Reported EPS Forecast Error",
+        format_signed_eps(reported_error),
+    )
+
+# Each row has a starting point and ending point.
+
+# --------------------------------------------------
+# October reported EPS error — contribution chart
+# --------------------------------------------------
+
+bridge_data = pd.DataFrame(
+    [
+        {
+            "component": "Adjusted EPS Outperformance",
+            "impact": adjusted_error,
+        },
+        {
+            "component": "Net Adjustment Effect",
+            "impact": adjustment_effect,
+        },
+    ]
+)
+
+bridge_data["display_value"] = (
+    bridge_data["impact"].apply(format_signed_eps)
+)
+
+component_order = [
+    "Adjusted EPS Outperformance",
+    "Net Adjustment Effect",
+]
+
+bridge_bars = (
+    alt.Chart(bridge_data)
+    .mark_bar(size=38)
+    .encode(
+        x=alt.X(
+            "impact:Q",
+            title="Contribution to Reported EPS Forecast Error ($ per share)",
+            scale=alt.Scale(
+                domain=[-0.25, 0.10],
+            ),
+            axis=alt.Axis(
+                values=[
+                    -0.25, -0.20, -0.15, -0.10,
+                    -0.05, 0, 0.05, 0.10,
+                ],
+                format="+.2f",
+            ),
+        ),
+        y=alt.Y(
+            "component:N",
+            title=None,
+            sort=component_order,
+            axis=alt.Axis(labelLimit=250),
+        ),
+        color=alt.condition(
+            alt.datum.impact >= 0,
+            alt.value("#2E7D32"),
+            alt.value("#C62828"),
+        ),
+        tooltip=[
+            alt.Tooltip(
+                "component:N",
+                title="Component",
+            ),
+            alt.Tooltip(
+                "impact:Q",
+                title="EPS Contribution",
+                format="+.3f",
+            ),
+        ],
+    )
+    .properties(height=160)
+)
+
+positive_labels = (
+    alt.Chart(bridge_data[bridge_data["impact"] >= 0])
+    .mark_text(align="left", dx=8, baseline="middle", color="#FFFFFF")
+    .encode(
+        x="impact:Q",
+        y=alt.Y("component:N", sort=component_order),
+        text="display_value:N",
+    )
+)
+
+negative_labels = (
+    alt.Chart(bridge_data[bridge_data["impact"] < 0])
+    .mark_text(align="right", dx=-8, baseline="middle", color="#FFFFFF")
+    .encode(
+        x="impact:Q",
+        y=alt.Y("component:N", sort=component_order),
+        text="display_value:N",
+    )
+)
+
+zero_line = (
+    alt.Chart(pd.DataFrame({"zero": [0]}))
+    .mark_rule(color="#888888", strokeWidth=1)
+    .encode(x="zero:Q")
+)
+
+st.divider()
+
+st.altair_chart(
+    bridge_bars + positive_labels + negative_labels + zero_line,
+    use_container_width=True,
+)
+
+
+st.markdown(
+    f"""
+    **The forecast disconnect is fully reconciled.**
+
+    Adjusted EPS exceeded October's guidance midpoint by
+    **{format_signed_eps(adjusted_error)}**.
+
+    Actual net adjustments exceeded forecast adjustments
+    by **\\${adjustment_difference:.2f} per share**, creating
+    a **{format_signed_eps(adjustment_effect)}** effect on
+    reported EPS forecast accuracy.
+
+    Together, these reconcile to a reported EPS forecast
+    error of **{format_signed_eps(reported_error)}**.
+
+    This does not invalidate management's adjusted EPS
+    forecast. It demonstrates why reported and adjusted
+    measures must be evaluated separately.
+    """
+)
+
+
+# --------------------------------------------------
 # Sources and methodology
 # --------------------------------------------------
 
@@ -1511,6 +2056,24 @@ with st.expander("Important methodology notes"):
         10 quarters analyzed contain each adjustment category.
         Frequency alone does not establish whether an item is
         economically recurring, unusual, or appropriate to exclude.
+
+        **Guidance vs. actuals**
+
+        Historical guidance observations reflect management's
+        published expectations at each disclosure date. They
+        are not retrospectively updated.
+
+        Forecast errors are calculated as annual actual EPS
+        minus the guidance range midpoint.
+
+        Currency-neutral adjusted EPS is a management-defined
+        measure of year-over-year performance excluding currency
+        effects. It should not be interpreted as a complete
+        isolation of operating performance.
+
+        Forecast adjustments are compared with independently
+        reported full-year adjustments. Quarterly EPS
+        adjustments are not summed to derive annual EPS.
         """
     )
 
@@ -1545,11 +2108,11 @@ with roadmap_col1:
 
     st.markdown(
         """
-        ### Guidance vs. Actuals
+        ### Operating Guidance vs. Actuals
 
-        Capture management guidance over time and compare
-        subsequent results with the expectations management
-        communicated to investors.
+        Extend the forecasting analysis beyond EPS to shipment
+        volumes, revenue growth, margins, and other operating
+        assumptions disclosed by management.
 
         ### PMI vs. Altria
 

@@ -24,6 +24,7 @@ It tracks the shift through:
 - segment revenue, gross profit, and gross margin
 - reported drivers of revenue and gross-profit growth
 - company-level financial outcomes
+- management guidance and forecast accuracy
 
 The result is an analytical product designed to connect company strategy with the underlying financial and operating data.
 
@@ -51,6 +52,11 @@ Heated tobacco, oral smoke-free products, and e-vapor products have very differe
 
 Revenue growth is only part of the story. Segment gross profit, gross margin, operating income, operating margin, and ultimately earnings per share provide increasingly demanding tests of whether the transformation is translating into financial performance.
 
+**How accurately does management anticipate financial performance?**
+
+Historical guidance provides a different perspective from reported results. By preserving forecasts as they were originally published, the analysis can measure forecast accuracy and distinguish changes in currency assumptions from changes in currency-neutral earnings expectations.
+
+
 ## What the Analysis Shows
 
 As of 2026-Q2, smoke-free products represented approximately **41.5% of PMI revenue** while accounting for approximately **23.5% of equivalent-unit shipment volume**. The difference illustrates the economic importance smoke-free products have already achieved within the company, although shipment units and revenue should not be interpreted as directly comparable measures of profitability.
@@ -72,6 +78,26 @@ PMI's management-adjusted results tell a different story. Reported diluted EPS d
 The difference is not simply the removal of one unusual impairment. Across the 10 quarters analyzed, amortization appears as an adjustment in every quarter, investment-valuation effects appear in every quarter, and Swedish Match financing-tax effects appear in nine. Other items, including impairments, restructuring, litigation, and divestiture-related effects, are more episodic.
 
 The analysis therefore does not treat either reported or adjusted EPS as the single "correct" measure of performance. GAAP EPS captures the full accounting result attributable to shareholders, while PMI's adjusted measure removes both unusual events and some recurring sources of accounting volatility. Understanding the company's earnings performance requires seeing both.
+
+### Management Guidance vs. Actual Performance
+
+The project also examines how accurately PMI management anticipated its financial performance.
+
+For FY2025, PMI initially forecast adjusted diluted EPS of $7.04–$7.17, compared with a final reported adjusted EPS result of $7.54.
+
+The initial guidance midpoint underestimated the result by $0.435 per share. By October, the midpoint forecast error had narrowed to just $0.030.
+
+However, the revisions were not driven by the same factors.
+
+The April increase of $0.32 per share was entirely attributable to improved currency expectations. The July and October increases reflected improvements in currency-neutral adjusted EPS guidance.
+
+The final forecast also revealed an important distinction between reported and adjusted earnings.
+
+October's adjusted EPS guidance midpoint was only $0.03 below the final result, but reported EPS finished $0.18 below its guidance midpoint.
+
+This difference is explained by changes in management's net EPS adjustments. Actual annual adjustments totaled $0.28 per share, compared with $0.07 included in October guidance.
+
+The analysis demonstrates that forecast accuracy depends on both the financial measure being evaluated and the changing assumptions underlying management's guidance.
 
 ## How the Project Evolved
 
@@ -253,6 +279,38 @@ Reported and adjusted EPS answer different questions and are most useful when vi
 
 The dashboard is therefore not intended to be a finished collection of every potentially useful PMI metric. It is an evolving analytical model in which new data is added when an observation creates a specific business question.
 
+
+### 10. Earnings analysis led to a forecasting question
+
+The reported-versus-adjusted EPS analysis created another question:
+
+> How accurately does PMI management anticipate its financial results, and what drives changes in those expectations?
+
+A new historical guidance dataset was created using FY2025 earnings disclosures.
+
+Rather than retaining only the latest forecast, the model preserves the original February guidance and subsequent April, July, and October revisions as separate observations.
+
+This introduced a new data-engineering requirement: forecasts must be stored according to when management published them, not only the fiscal period they describe.
+
+The analysis separates three measures:
+
+- reported diluted EPS guidance
+- adjusted diluted EPS guidance
+- currency-neutral adjusted EPS guidance
+
+Forecast revisions are decomposed into changes in currency expectations and currency-neutral guidance.
+
+Individual forecast adjustments are also captured and reconciled to management's published totals.
+
+Finally, the forecasts are compared with PMI's independently reported FY2025 annual results and annual EPS adjustment reconciliation.
+
+The resulting analysis explains how October adjusted EPS guidance could be highly accurate while reported EPS finished materially below expectations.
+
+This phase reinforces a broader principle:
+
+> Forecast performance should be evaluated against the assumptions and definitions available when the forecast was made.
+
+
 ## Data Architecture
 
 The project separates data collection, transformation, storage, analysis, and presentation into distinct layers.
@@ -343,6 +401,8 @@ Q4 = Full Year - Q1 - Q2 - Q3
 
 Derived observations are identified as such rather than being presented internally as directly reported source values.
 
+This derivation applies to additive financial measures, not diluted EPS or other non-additive per-share metrics. Quarterly EPS must be independently reported or calculated using an appropriate quarterly earnings and diluted-share denominator.
+
 ### Use recast history for segment comparisons
 
 PMI changed its reportable segment structure effective in 2026.
@@ -386,6 +446,14 @@ Dedicated QA checks validate the analytical exports consumed by the dashboard, p
 
 The goal is not merely to produce plausible-looking charts. It is to maintain a traceable path from public disclosure to analytical output.
 
+The guidance analysis adds validation of historical forecast observations, EPS midpoint calculations, currency and adjustment reconciliations, and forecast-to-actual differences.
+
+Each published forecast adjustment total must equal the sum of its component adjustments. Guidance revisions must reconcile to changes in currency-neutral expectations and expected currency impact. Forecast-to-actual EPS bridges must reconcile reported EPS forecast errors to adjusted EPS forecast errors and differences in net adjustments.
+
+FY2025 annual EPS adjustments are sourced from PMI's independently reported annual reconciliation rather than calculated by summing quarterly per-share adjustments.
+
+These relationships are included in the project's automated QA checks.
+
 ## Dashboard
 
 The Streamlit dashboard is organized around the analytical story rather than the structure of the underlying data.
@@ -422,13 +490,25 @@ The section follows the year-over-year earnings bridge through interest, taxes, 
 
 It then reconciles reported diluted EPS with PMI's management-adjusted diluted EPS and examines 10 quarters of adjustment history to distinguish persistent normalization policies, recurring volatility, and more episodic events.
 
-## Project Roadmap
-
-The project now connects PMI's operating transformation through to shareholder earnings, but several analytical questions remain open.
-
 ### Guidance vs. Actuals
 
-Capture management guidance over time and compare subsequent performance with the expectations communicated to investors.
+Examines management's FY2025 EPS forecasts across four guidance disclosures and compares each forecast with the final annual result.
+
+The dashboard includes:
+
+- historical adjusted EPS guidance ranges and midpoints against actual results
+- decomposition of guidance revisions into currency and currency-neutral components
+- reconciliation of October's reported EPS forecast error to adjusted EPS forecast accuracy and changes in net adjustments
+
+The analysis distinguishes management's original expectations from subsequent revisions rather than retroactively applying the final forecast to earlier periods.
+
+## Project Roadmap
+
+The project now connects PMI's operating transformation through to shareholder earnings, and adds in management forecasting of future periods, but several analytical questions remain open.
+
+### Operating Guidance vs. Actuals
+
+Extend the forecasting analysis beyond EPS to management's operating expectations, including shipment volumes, revenue growth, margins, and other disclosed performance assumptions.
 
 ### PMI vs. Altria
 
@@ -528,15 +608,25 @@ pmi-transformation-tracker/
 │   ├── database.py
 │   ├── analysis.py
 │   ├── export_analysis.py
-│   └── qa_v1.py
+│   ├── transform_guidance.py
+│   ├── analyze_guidance_revisions.py
+│   ├── analyze_guidance_adjustments.py
+│   ├── analyze_guidance_vs_actual_adjustments.py
+│   └── qa.py
 │
 └── tests/
 ```
 
+The guidance analysis extends this architecture with dated forecast snapshots. Each snapshot preserves the disclosure date, fiscal year being forecast, guidance ranges, and forecast adjustments.
+
+These observations are currently maintained in CSV-based source and analytical datasets rather than integrated into the core SQLite dimensional model. This preserves historical forecast versions while allowing the guidance analysis to reuse the existing analytical and presentation layers.
+
+
 ### Data layers
 
 **`data/raw/`**  
-Original downloaded source material. Raw source files are excluded from version control.
+Original source data, including SEC and PMI disclosures. The FY2025 guidance snapshots and annual EPS adjustment reconciliations are maintained as manually verified CSV datasets in this directory. These guidance source files are intended to be version-controlled; other downloaded raw materials may be excluded.
+
 
 **`data/processed/`**  
 Structured intermediate datasets produced by the transformation layer, including financial statement, earnings-bridge, and reported-to-adjusted EPS datasets.

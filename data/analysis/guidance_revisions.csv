@@ -1,0 +1,4 @@
+fiscal_year,previous_event_date,event_date,event_type,previous_adjusted_midpoint,adjusted_midpoint,change_adjusted_midpoint,change_currency_neutral_midpoint,change_currency_impact_forecast,change_adjustments,change_reported_midpoint,revision_driver,adjusted_revision_reconciliation,reported_revision_reconciliation
+2025,2025-02-06,2025-04-23,revision,7.105,7.425000000000001,0.3200000000000003,0.0,0.32,-0.14,0.4599999999999991,Currency only,2.7755575615628914e-16,-1.2212453270876722e-15
+2025,2025-04-23,2025-07-22,revision,7.425000000000001,7.494999999999999,0.06999999999999851,0.07000000000000028,0.0,-0.15999999999999998,0.23000000000000043,Underlying guidance only,-1.7763568394002505e-15,1.942890293094024e-15
+2025,2025-07-22,2025-10-21,revision,7.494999999999999,7.51,0.015000000000000568,0.015000000000000568,0.0,-0.12,0.1349999999999989,Underlying guidance only,0.0,-1.6653345369377348e-15
